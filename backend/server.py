@@ -294,6 +294,29 @@ async def update_linkedin(
     )
     return {"message": "LinkedIn URL updated"}
 
+@api_router.post("/auth/gdpr-consent")
+async def save_gdpr_consent(
+    consent: GDPRConsent,
+    current_user: dict = Depends(get_current_user)
+):
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {
+            "gdpr_consent": consent.dict(),
+            "gdpr_consent_date": datetime.utcnow()
+        }}
+    )
+    return {"message": "GDPR consent saved"}
+
+@api_router.get("/auth/gdpr-consent")
+async def get_gdpr_consent(
+    current_user: dict = Depends(get_current_user)
+):
+    return {
+        "consent": current_user.get("gdpr_consent"),
+        "consent_date": current_user.get("gdpr_consent_date")
+    }
+
 # ============ TENDER ENDPOINTS ============
 
 @api_router.get("/tenders", response_model=List[Tender])
