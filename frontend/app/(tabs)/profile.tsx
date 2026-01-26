@@ -187,7 +187,7 @@ export default function ProfileScreen() {
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Tender Tracker v1.0</Text>
+        <Text style={styles.footerText}>GroVELLOWS v1.0</Text>
         <Text style={styles.footerText}>German Construction Tenders</Text>
       </View>
     </ScrollView>
