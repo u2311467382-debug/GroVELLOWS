@@ -43,7 +43,8 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, name, role);
-      router.replace('/(tabs)');
+      // Redirect to GDPR consent screen after registration
+      router.replace('/(auth)/gdpr-consent?from=register');
     } catch (error: any) {
       Alert.alert('Registration Failed', error.message);
     } finally {
