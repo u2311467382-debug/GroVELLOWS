@@ -14,6 +14,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../utils/colors';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../utils/api';
+import { useTranslation } from 'react-i18next';
+import { changeLanguage } from '../../utils/i18n';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
