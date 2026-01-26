@@ -85,11 +85,11 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>LinkedIn Profile</Text>
+        <Text style={styles.sectionTitle}>{t('profile.linkedinProfile')}</Text>
         <View style={styles.inputContainer}>
           <TextInput
             style={styles.input}
-            placeholder="LinkedIn Profile URL"
+            placeholder={t('profile.linkedinUrl')}
             value={linkedinUrl}
             onChangeText={setLinkedinUrl}
             placeholderTextColor={colors.textLight}
@@ -99,12 +99,57 @@ export default function ProfileScreen() {
           style={styles.saveButton}
           onPress={handleUpdateLinkedIn}
         >
-          <Text style={styles.saveButtonText}>Save LinkedIn URL</Text>
+          <Text style={styles.saveButtonText}>{t('profile.saveLinkedIn')}</Text>
         </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notification Preferences</Text>
+        <Text style={styles.sectionTitle}>{t('profile.language')}</Text>
+        <View style={styles.languageButtons}>
+          <TouchableOpacity
+            style={[
+              styles.languageButton,
+              i18n.language === 'en' && styles.languageButtonActive,
+            ]}
+            onPress={() => handleChangeLanguage('en')}
+          >
+            <Ionicons 
+              name="globe-outline" 
+              size={20} 
+              color={i18n.language === 'en' ? colors.textWhite : colors.primary} 
+            />
+            <Text style={[
+              styles.languageButtonText,
+              i18n.language === 'en' && styles.languageButtonTextActive,
+            ]}>
+              {t('profile.english')}
+            </Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[
+              styles.languageButton,
+              i18n.language === 'de' && styles.languageButtonActive,
+            ]}
+            onPress={() => handleChangeLanguage('de')}
+          >
+            <Ionicons 
+              name="globe-outline" 
+              size={20} 
+              color={i18n.language === 'de' ? colors.textWhite : colors.primary} 
+            />
+            <Text style={[
+              styles.languageButtonText,
+              i18n.language === 'de' && styles.languageButtonTextActive,
+            ]}>
+              {t('profile.german')}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>{t('profile.notificationPreferences')}</Text>
         
         <View style={styles.settingRow}>
           <View style={styles.settingInfo}>
