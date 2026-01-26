@@ -20,6 +20,7 @@ import { changeLanguage } from '../../utils/i18n';
 export default function ProfileScreen() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const { t, i18n } = useTranslation();
   const [linkedinUrl, setLinkedinUrl] = useState(user?.linkedin_url || '');
   const [notifications, setNotifications] = useState(
     user?.notification_preferences || {
@@ -36,26 +37,31 @@ export default function ProfileScreen() {
       await api.put('/auth/linkedin', null, {
         params: { linkedin_url: linkedinUrl },
       });
-      Alert.alert('Success', 'LinkedIn URL updated');
+      Alert.alert(t('common.success'), 'LinkedIn URL updated');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update LinkedIn URL');
+      Alert.alert(t('common.error'), 'Failed to update LinkedIn URL');
     }
   };
 
   const handleUpdateNotifications = async () => {
     try {
       await api.put('/auth/preferences', notifications);
-      Alert.alert('Success', 'Notification preferences updated');
+      Alert.alert(t('common.success'), t('profile.savePreferences') + ' updated');
     } catch (error) {
-      Alert.alert('Error', 'Failed to update preferences');
+      Alert.alert(t('common.error'), 'Failed to update preferences');
     }
   };
 
+  const handleChangeLanguage = async (lang: string) => {
+    await changeLanguage(lang);
+    Alert.alert(t('common.success'), `Language changed to ${lang === 'de' ? 'Deutsch' : 'English'}`);
+  };
+
   const handleLogout = () => {
-    Alert.alert('Logout', 'Are you sure you want to logout?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('auth.logout'), t('auth.logoutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Logout',
+        text: t('auth.logout'),
         style: 'destructive',
         onPress: async () => {
           await logout();
