@@ -116,12 +116,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: fonts.bold,
+    fontWeight: fonts.weight.bold,
     color: colors.secondary,
     marginTop: 16,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: fonts.regular,
+    fontWeight: fonts.weight.regular,
     color: colors.textWhite,
     marginTop: 8,
   },
