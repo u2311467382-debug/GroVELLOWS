@@ -535,6 +535,78 @@ async def get_users(
         created_at=user["created_at"]
     ) for user in users]
 
+# ============ NEWS ENDPOINTS ============
+
+@api_router.get("/news")
+async def get_news(
+    issue_type: Optional[str] = None,
+    severity: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    
+    if issue_type:
+        query["issue_type"] = issue_type
+    if severity:
+        query["severity"] = severity
+    
+    news = await db.news.find(query).sort("published_date", -1).to_list(1000)
+    
+    return [NewsArticle(
+        id=str(article["_id"]),
+        **{k: v for k, v in article.items() if k != "_id"}
+    ) for article in news]
+
+@api_router.get("/news/{news_id}")
+async def get_news_article(
+    news_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    article = await db.news.find_one({"_id": ObjectId(news_id)})
+    if not article:
+        raise HTTPException(status_code=404, detail="News article not found")
+    
+    return NewsArticle(
+        id=str(article["_id"]),
+        **{k: v for k, v in article.items() if k != "_id"}
+    )
+
+# ============ DEVELOPER PROJECTS ENDPOINTS ============
+
+@api_router.get("/developer-projects")
+async def get_developer_projects(
+    status: Optional[str] = None,
+    developer: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    query = {}
+    
+    if status:
+        query["status"] = status
+    if developer:
+        query["developer_name"] = {"$regex": developer, "$options": "i"}
+    
+    projects = await db.developer_projects.find(query).sort("updated_at", -1).to_list(1000)
+    
+    return [DeveloperProject(
+        id=str(project["_id"]),
+        **{k: v for k, v in project.items() if k != "_id"}
+    ) for project in projects]
+
+@api_router.get("/developer-projects/{project_id}")
+async def get_developer_project(
+    project_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    project = await db.developer_projects.find_one({"_id": ObjectId(project_id)})
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    return DeveloperProject(
+        id=str(project["_id"]),
+        **{k: v for k, v in project.items() if k != "_id"}
+    )
+
 # ============ SEED DATA ============
 
 @api_router.post("/seed-data")
