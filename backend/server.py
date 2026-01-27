@@ -1090,6 +1090,7 @@ async def seed_sample_data():
     }
 
 # Include router
+app.include_router(api_router)
         {
             "title": "Neubau Wohnquartier Berlin-Mitte",
             "description": "Construction of a new residential quarter with 150 apartments, including underground parking and green spaces. IPA project delivery method.",
