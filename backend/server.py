@@ -725,12 +725,99 @@ async def get_public_portals(
 
 @api_router.post("/seed-data")
 async def seed_sample_data():
-    """Seed comprehensive sample data including tenders, news, and developer projects"""
+    """Seed comprehensive sample data including tenders, news, developer projects, and portals"""
     
     # Clear existing data for fresh seed
     await db.tenders.delete_many({})
     await db.news.delete_many({})
     await db.developer_projects.delete_many({})
+    await db.portals.delete_many({})
+    
+    # Seed tender portals
+    sample_portals = [
+        {
+            "name": "Bund.de",
+            "url": "https://service.bund.de",
+            "type": "public",
+            "region": "Federal",
+            "description": "German Federal Government Procurement Platform",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Vergabeplattform Berlin",
+            "url": "https://berlin.de/vergabeplattform",
+            "type": "public",
+            "region": "Berlin",
+            "description": "Berlin State Tender Platform",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Vergabe Bayern",
+            "url": "https://www.vergabe.bayern.de",
+            "type": "public",
+            "region": "Bavaria",
+            "description": "Bavaria State Procurement Portal",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "e-Vergabe NRW",
+            "url": "https://www.evergabe.nrw.de",
+            "type": "public",
+            "region": "North Rhine-Westphalia",
+            "description": "North Rhine-Westphalia E-Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Vergabe Baden-Württemberg",
+            "url": "https://vergabe.landbw.de",
+            "type": "public",
+            "region": "Baden-Württemberg",
+            "description": "Baden-Württemberg Tender Platform",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Hamburg Vergabe",
+            "url": "https://www.hamburg.de/wirtschaft/ausschreibungen-wirtschaft/",
+            "type": "public",
+            "region": "Hamburg",
+            "description": "Hamburg City Procurement Portal",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Sachsen Vergabe",
+            "url": "https://www.sachsen-vergabe.de",
+            "type": "public",
+            "region": "Saxony",
+            "description": "Saxony State Tender Platform",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "TED (Tenders Electronic Daily)",
+            "url": "https://ted.europa.eu",
+            "type": "public",
+            "region": "European",
+            "description": "European Union Public Procurement Database",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+    ]
+    
+    await db.portals.insert_many(sample_portals)
     
     # Existing tenders plus new specialized categories
     sample_tenders = [
