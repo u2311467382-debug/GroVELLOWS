@@ -643,6 +643,84 @@ async def get_developer_project(
         **{k: v for k, v in project.items() if k != "_id"}
     )
 
+# ============ ADMIN: PORTAL MANAGEMENT ENDPOINTS ============
+
+@api_router.get("/admin/portals")
+async def get_portals(
+    admin_user: dict = Depends(require_admin)
+):
+    """Get all tender portals (Admin only)"""
+    portals = await db.portals.find().sort("name", 1).to_list(1000)
+    
+    return [TenderPortal(
+        id=str(portal["_id"]),
+        **{k: v for k, v in portal.items() if k != "_id"}
+    ) for portal in portals]
+
+@api_router.post("/admin/portals")
+async def create_portal(
+    portal_data: PortalCreate,
+    admin_user: dict = Depends(require_admin)
+):
+    """Create new tender portal (Admin only)"""
+    portal_dict = portal_data.dict()
+    portal_dict["is_active"] = True
+    portal_dict["created_at"] = datetime.utcnow()
+    portal_dict["updated_at"] = datetime.utcnow()
+    
+    result = await db.portals.insert_one(portal_dict)
+    portal_dict["_id"] = result.inserted_id
+    
+    return TenderPortal(
+        id=str(result.inserted_id),
+        **{k: v for k, v in portal_dict.items() if k != "_id"}
+    )
+
+@api_router.put("/admin/portals/{portal_id}")
+async def update_portal(
+    portal_id: str,
+    portal_data: PortalUpdate,
+    admin_user: dict = Depends(require_admin)
+):
+    """Update tender portal (Admin only)"""
+    update_dict = {k: v for k, v in portal_data.dict().items() if v is not None}
+    update_dict["updated_at"] = datetime.utcnow()
+    
+    result = await db.portals.update_one(
+        {"_id": ObjectId(portal_id)},
+        {"$set": update_dict}
+    )
+    
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Portal not found")
+    
+    return {"message": "Portal updated successfully"}
+
+@api_router.delete("/admin/portals/{portal_id}")
+async def delete_portal(
+    portal_id: str,
+    admin_user: dict = Depends(require_admin)
+):
+    """Delete tender portal (Admin only)"""
+    result = await db.portals.delete_one({"_id": ObjectId(portal_id)})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Portal not found")
+    
+    return {"message": "Portal deleted successfully"}
+
+@api_router.get("/portals/public")
+async def get_public_portals(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all active portals (All users)"""
+    portals = await db.portals.find({"is_active": True}).sort("name", 1).to_list(1000)
+    
+    return [TenderPortal(
+        id=str(portal["_id"]),
+        **{k: v for k, v in portal.items() if k != "_id"}
+    ) for portal in portals]
+
 # ============ SEED DATA ============
 
 @api_router.post("/seed-data")
