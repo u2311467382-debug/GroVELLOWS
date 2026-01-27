@@ -261,6 +261,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token")
 
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    """Check if user has admin role (Director or Partner)"""
+    allowed_roles = ["Director", "Partner"]
+    if current_user.get("role") not in allowed_roles:
+        raise HTTPException(
+            status_code=403, 
+            detail="Admin access required. Only Directors and Partners can access this feature."
+        )
+    return current_user
+
 # ============ AUTH ENDPOINTS ============
 
 @api_router.post("/auth/register", response_model=Token)
