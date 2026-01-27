@@ -1285,9 +1285,10 @@ async def seed_sample_data():
     tender_count = len(sample_tenders)
     news_count = len(news_articles)
     projects_count = len(developer_projects)
+    portals_count = len(sample_portals)
     
     return {
-        "message": f"Successfully seeded {tender_count} tenders, {news_count} news articles, and {projects_count} developer projects"
+        "message": f"Successfully seeded {tender_count} tenders, {news_count} news articles, {projects_count} developer projects, and {portals_count} tender portals"
     }
 
 # Include router
