@@ -1007,6 +1007,107 @@ async def seed_sample_data():
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
+        # Hospital/Klinikum Tender Portals
+        {
+            "name": "Universitätsklinikum Jena",
+            "url": "https://www.uniklinikum-jena.de/Ausschreibungen.html",
+            "type": "hospital",
+            "region": "Thuringia",
+            "description": "Jena University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Dresden",
+            "url": "https://www.uniklinikum-dresden.de/de/das-klinikum/universitaetsklinikum-carl-gustav-carus/geschaeftsbereich-logistik-und-einkauf/vergabe",
+            "type": "hospital",
+            "region": "Saxony",
+            "description": "Dresden University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Würzburg",
+            "url": "https://www.ukw.de/ausschreibungen/startseite/",
+            "type": "hospital",
+            "region": "Bavaria",
+            "description": "Würzburg University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Göttingen",
+            "url": "https://www.umg.eu/ueber-uns/einkauf-logistik/ausschreibungen/",
+            "type": "hospital",
+            "region": "Lower Saxony",
+            "description": "Göttingen University Medical Center Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Magdeburg",
+            "url": "https://www.med.uni-magdeburg.de/Ausschreibungen.html",
+            "type": "hospital",
+            "region": "Saxony-Anhalt",
+            "description": "Magdeburg University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Leipzig",
+            "url": "https://www.uniklinikum-leipzig.de/Seiten/ausschreibungen.aspx",
+            "type": "hospital",
+            "region": "Saxony",
+            "description": "Leipzig University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Heidelberg",
+            "url": "https://www.klinikum.uni-heidelberg.de/zentrale-einrichtungen/verwaltung/einkauf-technik/einkaufslogistik/ausschreibungen/",
+            "type": "hospital",
+            "region": "Baden-Württemberg",
+            "description": "Heidelberg University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsmedizin Mainz",
+            "url": "https://www.unimedizin-mainz.de/index.php?id=43693",
+            "type": "hospital",
+            "region": "Rhineland-Palatinate",
+            "description": "Mainz University Medical Center Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Münster",
+            "url": "https://www.ukm.de/index.php?id=ausschreibungen",
+            "type": "hospital",
+            "region": "North Rhine-Westphalia",
+            "description": "Münster University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "name": "Universitätsklinikum Freiburg",
+            "url": "https://www.uniklinik-freiburg.de/karriere-portal/ausschreibungen.html",
+            "type": "hospital",
+            "region": "Baden-Württemberg",
+            "description": "Freiburg University Hospital Procurement",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
     ]
     
     await db.portals.insert_many(sample_portals)
