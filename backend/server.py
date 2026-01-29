@@ -1114,7 +1114,7 @@ async def seed_sample_data():
     
     # Existing tenders plus new specialized categories
     sample_tenders = [
-        # Original tenders...
+        # Original tenders with building typologies
         {
             "title": "Neubau Wohnquartier Berlin-Mitte",
             "description": "Construction of a new residential quarter with 150 apartments, including underground parking and green spaces. IPA project delivery method.",
@@ -1131,9 +1131,13 @@ async def seed_sample_data():
             },
             "tender_date": datetime(2025, 7, 1),
             "category": "IPA",
+            "building_typology": "Residential",
             "platform_source": "Vergabeplattform Berlin",
             "platform_url": "https://berlin.de/vergabeplattform",
             "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
@@ -1154,9 +1158,13 @@ async def seed_sample_data():
             },
             "tender_date": datetime(2025, 7, 15),
             "category": "Risk Management",
+            "building_typology": "Infrastructure",
             "platform_source": "Vergabe Bayern",
             "platform_url": "https://www.vergabe.bayern.de",
             "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         },
