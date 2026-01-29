@@ -492,6 +492,32 @@ export default function TendersScreen() {
                   ))}
                 </View>
               </View>
+
+              {/* Building Typology Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Building Type</Text>
+                <View style={styles.filterGrid}>
+                  {BUILDING_TYPOLOGIES.map((typology) => (
+                    <TouchableOpacity
+                      key={typology}
+                      style={[
+                        styles.filterChip,
+                        selectedTypology === typology && styles.filterChipActive,
+                      ]}
+                      onPress={() => setSelectedTypology(typology)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          selectedTypology === typology && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {typology}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </ScrollView>
 
             <View style={styles.modalFooter}>
