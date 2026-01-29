@@ -90,7 +90,7 @@ export default function TendersScreen() {
 
   useEffect(() => {
     filterAndSortTenders();
-  }, [tenders, searchQuery, selectedCategory, selectedStatus, sortBy]);
+  }, [tenders, searchQuery, selectedCategory, selectedStatus, selectedTypology, sortBy]);
 
   const fetchTenders = async () => {
     try {
