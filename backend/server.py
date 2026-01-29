@@ -158,6 +158,11 @@ class Share(BaseModel):
     message: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
+class ShareRequest(BaseModel):
+    tender_id: str
+    shared_with: List[str]
+    message: Optional[str] = None
+
 class TenderDocument(BaseModel):
     tender_id: str
     user_id: str
