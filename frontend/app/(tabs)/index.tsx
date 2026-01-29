@@ -165,8 +165,26 @@ export default function TendersScreen() {
   const clearFilters = () => {
     setSelectedCategory('All');
     setSelectedStatus('All');
+    setSelectedTypology('All');
     setSearchQuery('');
     setSortBy('date_desc');
+  };
+
+  const handleApply = async (tenderId: string, isApplied: boolean) => {
+    try {
+      setApplyingId(tenderId);
+      if (isApplied) {
+        await api.delete(`/tenders/${tenderId}/apply`);
+      } else {
+        await api.post(`/tenders/${tenderId}/apply`);
+      }
+      // Refresh tenders
+      fetchTenders();
+    } catch (error) {
+      console.error('Failed to update application:', error);
+    } finally {
+      setApplyingId(null);
+    }
   };
 
   const renderCompactCard = ({ item }: { item: Tender }) => (
