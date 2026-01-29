@@ -317,7 +317,7 @@ export default function TendersScreen() {
             onPress={() => setShowFilters(true)}
           >
             <Ionicons name="options" size={22} color={colors.primary} />
-            {(selectedCategory !== 'All' || selectedStatus !== 'All') && (
+            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All') && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
@@ -341,6 +341,14 @@ export default function TendersScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.quickFilterChip, selectedTypology === 'Healthcare' && styles.quickFilterChipActive]}
+            onPress={() => setSelectedTypology(selectedTypology === 'Healthcare' ? 'All' : 'Healthcare')}
+          >
+            <Ionicons name="medkit" size={14} color={selectedTypology === 'Healthcare' ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypology === 'Healthcare' && styles.quickFilterTextActive]}>Hospital</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.quickFilterChip, viewMode === 'compact' && styles.quickFilterChipActive]}
             onPress={() => setViewMode(viewMode === 'list' ? 'compact' : 'list')}
           >
@@ -352,7 +360,7 @@ export default function TendersScreen() {
             <Text style={[styles.quickFilterText, viewMode === 'compact' && styles.quickFilterTextActive]}>View</Text>
           </TouchableOpacity>
 
-          {(selectedCategory !== 'All' || selectedStatus !== 'All' || searchQuery) && (
+          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || searchQuery) && (
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
               <Ionicons name="close" size={14} color={colors.error} />
               <Text style={styles.clearButtonText}>Clear</Text>
