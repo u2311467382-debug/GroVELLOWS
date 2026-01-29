@@ -1365,6 +1365,139 @@ async def seed_sample_data():
             "status": "New",
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
+        },
+        # Hospital/Klinikum Tenders
+        {
+            "title": "Neubau Klinikum Jena - Project Management IPA",
+            "description": "Integrated project management for new university hospital construction in Jena. 850 beds capacity, state-of-the-art medical facilities with IPA delivery method.",
+            "budget": "€12,500,000",
+            "deadline": datetime(2025, 10, 15),
+            "location": "Jena, Thüringen",
+            "project_type": "Hospital Construction",
+            "contracting_authority": "Universitätsklinikum Jena",
+            "participants": [],
+            "contact_details": {
+                "name": "Dr. med. Hans Berger",
+                "email": "h.berger@med.uni-jena.de",
+                "phone": "+49 3641 9320123"
+            },
+            "tender_date": datetime(2025, 8, 15),
+            "category": "IPA",
+            "building_typology": "Healthcare",
+            "platform_source": "Universitätsklinikum Jena",
+            "platform_url": "https://www.uniklinikum-jena.de/Ausschreibungen.html",
+            "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "title": "Erweiterungsbau Universitätsklinikum Dresden",
+            "description": "Expansion project for Dresden University Hospital. New surgical wing and intensive care unit. Lean construction approach required.",
+            "budget": "€8,200,000",
+            "deadline": datetime(2025, 11, 1),
+            "location": "Dresden, Sachsen",
+            "project_type": "Hospital Expansion",
+            "contracting_authority": "Universitätsklinikum Dresden",
+            "participants": [],
+            "contact_details": {
+                "name": "Dipl.-Ing. Sabine Richter",
+                "email": "s.richter@uniklinikum-dresden.de",
+                "phone": "+49 351 458 1234"
+            },
+            "tender_date": datetime(2025, 8, 20),
+            "category": "Lean Management",
+            "building_typology": "Healthcare",
+            "platform_source": "Universitätsklinikum Dresden",
+            "platform_url": "https://www.uniklinikum-dresden.de/de/das-klinikum/universitaetsklinikum-carl-gustav-carus/geschaeftsbereich-logistik-und-einkauf/vergabe",
+            "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "title": "Risk Assessment Klinikum Würzburg Modernisierung",
+            "description": "Risk management services for Würzburg Hospital modernization project. Assessment of structural, operational and compliance risks.",
+            "budget": "€1,800,000",
+            "deadline": datetime(2025, 9, 25),
+            "location": "Würzburg, Bayern",
+            "project_type": "Risk Assessment",
+            "contracting_authority": "Universitätsklinikum Würzburg",
+            "participants": [],
+            "contact_details": {
+                "name": "Prof. Dr. Michael Baumann",
+                "email": "m.baumann@ukw.de",
+                "phone": "+49 931 201 5678"
+            },
+            "tender_date": datetime(2025, 8, 10),
+            "category": "Risk Management",
+            "building_typology": "Healthcare",
+            "platform_source": "Universitätsklinikum Würzburg",
+            "platform_url": "https://www.ukw.de/ausschreibungen/startseite/",
+            "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        # Data Center Tender
+        {
+            "title": "Data Center Frankfurt - Cost Management",
+            "description": "Cost management and controlling for new hyperscale data center in Frankfurt. 100MW facility with redundant systems.",
+            "budget": "€4,500,000",
+            "deadline": datetime(2025, 10, 30),
+            "location": "Frankfurt am Main, Hessen",
+            "project_type": "Data Center Construction",
+            "contracting_authority": "DE-CIX Data Center GmbH",
+            "participants": [],
+            "contact_details": {
+                "name": "Thomas Weber",
+                "email": "t.weber@de-cix.net",
+                "phone": "+49 69 1730 9876"
+            },
+            "tender_date": datetime(2025, 8, 25),
+            "category": "Cost Management",
+            "building_typology": "Data Center",
+            "platform_source": "TED (Tenders Electronic Daily)",
+            "platform_url": "https://ted.europa.eu",
+            "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        # Commercial/Mixed-Use
+        {
+            "title": "Mixed-Use Development Düsseldorf - IPD Delivery",
+            "description": "Integrated Project Delivery for mixed-use development in Düsseldorf MedienHafen. Office, retail, and residential components.",
+            "budget": "€18,000,000",
+            "deadline": datetime(2025, 12, 1),
+            "location": "Düsseldorf, NRW",
+            "project_type": "Mixed-Use Development",
+            "contracting_authority": "Catella Project Management GmbH",
+            "participants": [],
+            "contact_details": {
+                "name": "Anna Schulze",
+                "email": "a.schulze@catella.com",
+                "phone": "+49 211 8765 4321"
+            },
+            "tender_date": datetime(2025, 9, 1),
+            "category": "IPD",
+            "building_typology": "Mixed-Use",
+            "platform_source": "e-Vergabe NRW",
+            "platform_url": "https://www.evergabe.nrw.de",
+            "status": "New",
+            "is_applied": False,
+            "application_status": "Not Applied",
+            "linkedin_connections": [],
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
         }
     ]
     
