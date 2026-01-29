@@ -116,6 +116,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Implemented JWT-based authentication with 6 roles (Project Manager, Senior PM, Intern, HR, Partner, Director). Registration and login endpoints tested via curl successfully."
+      - working: true
+        agent: "testing"
+        comment: "Login endpoint tested successfully. Registration fails for existing users (expected behavior). Authentication working correctly."
 
   - task: "Tender Management API"
     implemented: true
@@ -128,42 +131,102 @@ backend:
       - working: true
         agent: "main"
         comment: "Complete CRUD operations for tenders with filtering by status, category, location, and search. 8 sample German construction tenders seeded successfully."
+      - working: true
+        agent: "testing"
+        comment: "Tender retrieval working correctly. Retrieved 16 tenders successfully. Building typology filtering working - found 3 healthcare and 1 data center tenders."
 
-  - task: "Favorites System"
+  - task: "Application Tracking System"
     implemented: true
-    working: "NA"
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "All application tracking endpoints working correctly: POST /api/tenders/{id}/apply, DELETE /api/tenders/{id}/apply, PUT /api/tenders/{id}/application-status, GET /api/my-applications. Status updates (Won/Lost/Awaiting Results) working properly."
+
+  - task: "LinkedIn Integration"
+    implemented: true
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "LinkedIn connection endpoints working correctly: POST /api/tenders/{id}/linkedin and DELETE /api/tenders/{id}/linkedin/{index}. Can add and remove LinkedIn connections successfully."
+
+  - task: "Building Typology Filtering"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Building typology filtering working correctly. Healthcare filter returns 3 tenders, Data Center filter returns 1 tender. Query parameter ?building_typology= working as expected."
+
+  - task: "Portal Management"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "Public portals endpoint working correctly. Retrieved 18 portals including 10 hospital portals. GET /api/portals/public returns all active portals."
+
+  - task: "Favorites System"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Add/remove favorites and get user favorites endpoints implemented. Needs frontend testing."
+      - working: true
+        agent: "testing"
+        comment: "Favorites system working correctly. Can add/remove favorites and retrieve user favorites. All endpoints (POST, GET, DELETE /api/favorites/{id}) working properly."
 
   - task: "Sharing System"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Share tenders with team members endpoint implemented. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "Sharing system working correctly after fixing ShareRequest model. Can share tenders and retrieve shares. Fixed ObjectId serialization issue in GET /api/shares endpoint."
 
   - task: "Notification Preferences"
     implemented: true
-    working: "NA"
+    working: true
     file: "server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "User notification preferences (new tenders, status changes, IPA, PM, daily digest) implemented. Needs testing."
+      - working: true
+        agent: "testing"
+        comment: "Notification preferences working correctly. Can update preferences via PUT /api/auth/preferences and retrieve via GET /api/auth/me. All preference toggles working properly."
 
   - task: "Sample Tender Data"
     implemented: true
@@ -176,6 +239,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Successfully seeded 8 sample German construction tenders with various categories (IPA, IPD, PM), budgets, locations across Germany (Berlin, Frankfurt, München, Hamburg, etc.)"
+      - working: true
+        agent: "testing"
+        comment: "Seed data endpoint working correctly. Successfully seeds 16 tenders and 18 portals (including 10 hospital portals). POST /api/seed-data working as expected."
 
 frontend:
   - task: "Authentication Screens"
