@@ -29,6 +29,9 @@ interface Tender {
   category: string;
   status: string;
   platform_source: string;
+  building_typology?: string;
+  is_applied?: boolean;
+  application_status?: string;
 }
 
 const STATUS_COLORS = {
@@ -37,12 +40,24 @@ const STATUS_COLORS = {
   'Closed': colors.textLight,
 };
 
+const APPLICATION_STATUS_COLORS = {
+  'Not Applied': colors.textLight,
+  'Awaiting Results': colors.warning,
+  'Won': colors.success,
+  'Lost': colors.error,
+};
+
 const CATEGORIES = [
   'All', 'IPA', 'IPD', 'Integrated Project Management', 'Project Management',
   'Risk Management', 'Lean Management', 'Procurement Management',
   'Organization Alignment Workshops', 'Construction Supervision',
   'Change Order Management', 'Cost Management', 'Tendering Process',
   'Project Completion', 'Handover Documentation', 'General'
+];
+
+const BUILDING_TYPOLOGIES = [
+  'All', 'Residential', 'Commercial', 'Mixed-Use', 'Healthcare', 
+  'Data Center', 'Infrastructure', 'Industrial'
 ];
 
 const STATUSES = ['All', 'New', 'In Progress', 'Closed'];
