@@ -748,6 +748,11 @@ async def get_shares(
         {"shared_with": str(current_user["_id"])}
     ).sort("created_at", -1).to_list(1000)
     
+    # Convert ObjectId to string for JSON serialization
+    for share in shares:
+        share["id"] = str(share["_id"])
+        del share["_id"]
+    
     return shares
 
 # ============ USERS ENDPOINTS ============
