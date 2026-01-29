@@ -132,6 +132,11 @@ export default function TendersScreen() {
       filtered = filtered.filter((tender) => tender.status === selectedStatus);
     }
 
+    // Building typology filter
+    if (selectedTypology !== 'All') {
+      filtered = filtered.filter((tender) => tender.building_typology === selectedTypology);
+    }
+
     // Sorting
     filtered.sort((a, b) => {
       switch (sortBy) {
