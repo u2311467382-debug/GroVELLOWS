@@ -2589,11 +2589,12 @@ async def cleanup_awarded_tenders():
         
         # Find awarded/closed tenders that are NOT favorited
         # Status: Closed OR application_status: Won/Lost
+        # Keep tenders for 2 months (60 days) before cleanup
         query = {
             "$or": [
                 {"status": "Closed"},
                 {"application_status": {"$in": ["Won", "Lost"]}},
-                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=7)}}  # Expired > 7 days
+                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=60)}}  # Expired > 2 months
             ]
         }
         
