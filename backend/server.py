@@ -1815,6 +1815,418 @@ async def seed_sample_data():
         "message": f"Successfully seeded {tender_count} tenders, {news_count} news articles, {projects_count} developer projects, and {portals_count} tender portals"
     }
 
+# ============ LIVE SCRAPING ENDPOINTS ============
+
+@api_router.post("/scrape/all")
+@limiter.limit("1/minute")
+async def scrape_all_tenders(
+    request: Request,
+    max_per_portal: int = 20,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Scrape live tenders from all available German tender portals.
+    Only Directors and Partners can initiate scraping.
+    GDPR: Only public tender data is collected.
+    """
+    if not check_permission(current_user, "scrape"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Only Directors can initiate live scraping"
+        )
+    
+    try:
+        from scraper import scrape_all_portals
+        
+        logger.info(f"Starting live scrape initiated by {current_user['email']}")
+        
+        # Scrape all portals
+        scraped_tenders = await scrape_all_portals(max_per_portal=max_per_portal)
+        
+        if not scraped_tenders:
+            return {"message": "No new tenders found", "count": 0, "duplicates_skipped": 0}
+        
+        # Deduplicate and insert
+        inserted = 0
+        duplicates = 0
+        
+        for tender in scraped_tenders:
+            # Check if tender already exists by source_id
+            existing = await db.tenders.find_one({"source_id": tender.get("source_id")})
+            
+            if existing:
+                duplicates += 1
+                continue
+            
+            await db.tenders.insert_one(tender)
+            inserted += 1
+        
+        logger.info(f"Scraping complete: {inserted} new tenders, {duplicates} duplicates skipped")
+        
+        return {
+            "message": f"Scraping complete",
+            "count": inserted,
+            "duplicates_skipped": duplicates,
+            "sources": ["Bund.de", "TED Europa", "State Portals"]
+        }
+        
+    except ImportError:
+        raise HTTPException(status_code=500, detail="Scraper module not available")
+    except Exception as e:
+        logger.error(f"Scraping error: {e}")
+        raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}")
+
+@api_router.get("/scrape/status")
+async def get_scrape_status(current_user: dict = Depends(get_current_user)):
+    """Get last scrape status and statistics"""
+    # Get latest scraped tender
+    latest = await db.tenders.find_one(
+        {"scraped_at": {"$exists": True}},
+        sort=[("scraped_at", -1)]
+    )
+    
+    # Count scraped vs seeded tenders
+    scraped_count = await db.tenders.count_documents({"scraped_at": {"$exists": True}})
+    total_count = await db.tenders.count_documents({})
+    
+    return {
+        "total_tenders": total_count,
+        "scraped_tenders": scraped_count,
+        "seeded_tenders": total_count - scraped_count,
+        "last_scrape": latest.get("scraped_at") if latest else None,
+        "sources": {
+            "bund_de": await db.tenders.count_documents({"platform_source": "Bund.de"}),
+            "ted_europa": await db.tenders.count_documents({"platform_source": "TED Europa"}),
+            "state_portals": await db.tenders.count_documents({"platform_source": {"$regex": "Vergabe", "$options": "i"}})
+        }
+    }
+
+# ============ EMPLOYEE CONNECTIONS ENDPOINTS ============
+
+@api_router.get("/employees")
+async def get_all_employees(
+    department: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Get all employees in the system for sharing/connections.
+    Auto-adds to sharing list when user registers.
+    """
+    query = {"is_active": True} if await db.users.find_one({"is_active": {"$exists": True}}) else {}
+    
+    if department:
+        query["department"] = department
+    
+    users = await db.users.find(
+        query,
+        {"hashed_password": 0}  # Exclude password
+    ).to_list(100)
+    
+    employees = []
+    for user in users:
+        employees.append({
+            "id": str(user["_id"]),
+            "name": user.get("name", ""),
+            "email": user.get("email", ""),
+            "role": user.get("role", ""),
+            "department": user.get("department"),
+            "linkedin_url": user.get("linkedin_url"),
+            "profile": user.get("profile", {}),
+            "is_online": user.get("last_active") and (datetime.utcnow() - user.get("last_active", datetime.min)).seconds < 300
+        })
+    
+    return employees
+
+@api_router.put("/employees/profile")
+async def update_employee_profile(
+    profile_data: EmployeeProfile,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update employee's extended profile for connections matching"""
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {
+            "profile": profile_data.dict(),
+            "updated_at": datetime.utcnow()
+        }}
+    )
+    return {"message": "Profile updated successfully"}
+
+@api_router.get("/tenders/{tender_id}/connections")
+async def get_tender_connections(
+    tender_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Find employees with relevant experience for a tender.
+    Matches based on: location, contracting authority, project type.
+    """
+    tender = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    # Get all employees with profiles
+    employees = await db.users.find(
+        {"profile": {"$exists": True}},
+        {"hashed_password": 0}
+    ).to_list(100)
+    
+    connections = []
+    tender_location = tender.get("location", "").lower()
+    tender_authority = tender.get("contracting_authority", "").lower()
+    tender_category = tender.get("category", "").lower()
+    
+    for emp in employees:
+        profile = emp.get("profile", {})
+        relevance_score = 0
+        reasons = []
+        
+        # Check location experience
+        for region in profile.get("regions_experience", []):
+            if region.lower() in tender_location or tender_location in region.lower():
+                relevance_score += 30
+                reasons.append(f"Experience in {region}")
+                break
+        
+        # Check authority experience
+        for authority in profile.get("authorities_experience", []):
+            if authority.lower() in tender_authority or tender_authority in authority.lower():
+                relevance_score += 40
+                reasons.append(f"Worked with {authority}")
+                break
+        
+        # Check expertise match
+        for expertise in profile.get("expertise", []):
+            if expertise.lower() in tender_category:
+                relevance_score += 20
+                reasons.append(f"Expertise in {expertise}")
+                break
+        
+        if relevance_score > 0:
+            connections.append({
+                "employee_id": str(emp["_id"]),
+                "name": emp.get("name", ""),
+                "email": emp.get("email", ""),
+                "role": emp.get("role", ""),
+                "department": emp.get("department"),
+                "linkedin_url": emp.get("linkedin_url"),
+                "relevance_score": relevance_score,
+                "reasons": reasons
+            })
+    
+    # Sort by relevance
+    connections.sort(key=lambda x: x["relevance_score"], reverse=True)
+    
+    return {
+        "tender_id": tender_id,
+        "tender_title": tender.get("title", ""),
+        "connections": connections[:10]  # Top 10 matches
+    }
+
+# ============ SHARING ENDPOINTS ============
+
+class ShareRequest(BaseModel):
+    tender_id: str
+    recipient_ids: List[str]
+    message: Optional[str] = None
+
+@api_router.post("/share/tender")
+async def share_tender(
+    share_req: ShareRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Share a tender with other employees"""
+    if not check_permission(current_user, "share"):
+        raise HTTPException(status_code=403, detail="You don't have permission to share")
+    
+    tender = await db.tenders.find_one({"_id": ObjectId(share_req.tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    # Create share records
+    shares = []
+    for recipient_id in share_req.recipient_ids:
+        recipient = await db.users.find_one({"_id": ObjectId(recipient_id)})
+        if recipient:
+            share = {
+                "tender_id": share_req.tender_id,
+                "tender_title": tender.get("title", ""),
+                "shared_by": str(current_user["_id"]),
+                "shared_by_name": current_user.get("name", ""),
+                "shared_with": recipient_id,
+                "shared_with_email": recipient.get("email", ""),
+                "message": sanitize_input(share_req.message) if share_req.message else None,
+                "created_at": datetime.utcnow(),
+                "is_read": False
+            }
+            await db.shared_tenders.insert_one(share)
+            shares.append(share)
+    
+    return {
+        "message": f"Tender shared with {len(shares)} employees",
+        "shares": len(shares)
+    }
+
+@api_router.get("/share/inbox")
+async def get_shared_inbox(
+    unread_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get tenders shared with the current user"""
+    query = {"shared_with": str(current_user["_id"])}
+    if unread_only:
+        query["is_read"] = False
+    
+    shares = await db.shared_tenders.find(query).sort("created_at", -1).to_list(100)
+    
+    result = []
+    for share in shares:
+        result.append({
+            "id": str(share["_id"]),
+            "tender_id": share.get("tender_id"),
+            "tender_title": share.get("tender_title"),
+            "shared_by_name": share.get("shared_by_name"),
+            "message": share.get("message"),
+            "created_at": share.get("created_at"),
+            "is_read": share.get("is_read", False)
+        })
+    
+    return result
+
+@api_router.put("/share/{share_id}/read")
+async def mark_share_read(
+    share_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark a shared tender as read"""
+    await db.shared_tenders.update_one(
+        {"_id": ObjectId(share_id), "shared_with": str(current_user["_id"])},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "Marked as read"}
+
+# ============ GDPR/DSGVO COMPLIANCE ENDPOINTS ============
+
+@api_router.get("/gdpr/my-data")
+async def export_my_data(current_user: dict = Depends(get_current_user)):
+    """
+    GDPR Article 20: Right to data portability
+    Export all personal data for the user
+    """
+    user_id = str(current_user["_id"])
+    
+    # Collect all user data
+    user_data = await db.users.find_one(
+        {"_id": current_user["_id"]},
+        {"hashed_password": 0}
+    )
+    
+    # Get user's favorites
+    favorites = await db.favorites.find({"user_id": user_id}).to_list(1000)
+    
+    # Get user's applications
+    applications = await db.tenders.find(
+        {"applied_by": user_id}
+    ).to_list(1000)
+    
+    # Get shared tenders
+    shared_sent = await db.shared_tenders.find({"shared_by": user_id}).to_list(1000)
+    shared_received = await db.shared_tenders.find({"shared_with": user_id}).to_list(1000)
+    
+    export_data = {
+        "export_date": datetime.utcnow().isoformat(),
+        "user_info": {
+            "email": user_data.get("email"),
+            "name": user_data.get("name"),
+            "role": user_data.get("role"),
+            "department": user_data.get("department"),
+            "linkedin_url": user_data.get("linkedin_url"),
+            "profile": user_data.get("profile"),
+            "created_at": str(user_data.get("created_at")),
+            "gdpr_consent_date": str(user_data.get("gdpr_consent_date")) if user_data.get("gdpr_consent_date") else None
+        },
+        "favorites_count": len(favorites),
+        "applications_count": len(applications),
+        "shared_tenders_sent": len(shared_sent),
+        "shared_tenders_received": len(shared_received)
+    }
+    
+    return export_data
+
+@api_router.delete("/gdpr/delete-account")
+async def delete_my_account(
+    confirm: bool = Query(..., description="Confirm account deletion"),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    GDPR Article 17: Right to erasure (right to be forgotten)
+    Permanently delete user account and all associated data
+    """
+    if not confirm:
+        raise HTTPException(
+            status_code=400, 
+            detail="Please confirm account deletion by setting confirm=true"
+        )
+    
+    user_id = str(current_user["_id"])
+    
+    # Delete user's data
+    await db.favorites.delete_many({"user_id": user_id})
+    await db.shared_tenders.delete_many({"$or": [
+        {"shared_by": user_id},
+        {"shared_with": user_id}
+    ]})
+    
+    # Remove user from applied_by lists
+    await db.tenders.update_many(
+        {"applied_by": user_id},
+        {"$pull": {"applied_by": user_id}}
+    )
+    
+    # Delete user account
+    await db.users.delete_one({"_id": current_user["_id"]})
+    
+    logger.info(f"GDPR: Account deleted for user {current_user['email']}")
+    
+    return {
+        "message": "Account and all associated data permanently deleted",
+        "deleted_at": datetime.utcnow().isoformat()
+    }
+
+@api_router.get("/gdpr/privacy-policy")
+async def get_privacy_policy():
+    """Return the GDPR-compliant privacy policy"""
+    return {
+        "version": "1.0",
+        "last_updated": "2025-01-29",
+        "language": "de",
+        "company": "GroVELLOWS GmbH",
+        "data_controller": "GroVELLOWS GmbH",
+        "contact_email": "datenschutz@grovellows.de",
+        "policy": {
+            "data_collected": [
+                "Name und E-Mail-Adresse",
+                "Berufliche Informationen (Rolle, Abteilung)",
+                "LinkedIn-Profil-URL (optional)",
+                "Nutzungsdaten und Präferenzen"
+            ],
+            "purpose": [
+                "Bereitstellung der Ausschreibungs-Tracking-Dienste",
+                "Ermöglichung der Zusammenarbeit zwischen Mitarbeitern",
+                "Benachrichtigungen über relevante Ausschreibungen"
+            ],
+            "legal_basis": "Einwilligung (Art. 6 Abs. 1 lit. a DSGVO) und berechtigtes Interesse (Art. 6 Abs. 1 lit. f DSGVO)",
+            "data_retention": "Daten werden für die Dauer der Nutzung gespeichert und auf Anfrage gelöscht",
+            "your_rights": [
+                "Recht auf Auskunft (Art. 15 DSGVO)",
+                "Recht auf Berichtigung (Art. 16 DSGVO)",
+                "Recht auf Löschung (Art. 17 DSGVO)",
+                "Recht auf Datenübertragbarkeit (Art. 20 DSGVO)",
+                "Recht auf Widerspruch (Art. 21 DSGVO)"
+            ]
+        }
+    }
+
 # Include router
 
 # Include router
