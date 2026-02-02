@@ -1,0 +1,142 @@
+[
+  {
+    "test": "Director Login",
+    "success": true,
+    "details": "Role: Director, Token received",
+    "timestamp": "2026-02-02T16:38:11.019136",
+    "response_data": null
+  },
+  {
+    "test": "Regular User Login",
+    "success": true,
+    "details": "Role: Project Manager, Token received",
+    "timestamp": "2026-02-02T16:38:11.259811",
+    "response_data": null
+  },
+  {
+    "test": "Get Scrape Status",
+    "success": true,
+    "details": "Status retrieved: {'total_tenders': 22, 'scraped_tenders': 6, 'seeded_tenders': 16, 'last_scrape': '2026-02-02T16:32:35.571000', 'sources': {'bund_de': 1, 'ted_europa': 0, 'state_portals': 17}}",
+    "timestamp": "2026-02-02T16:38:11.279170",
+    "response_data": null
+  },
+  {
+    "test": "Live Scrape All",
+    "success": true,
+    "details": "Scrape initiated: {'message': 'Scraping complete', 'count': 6, 'duplicates_skipped': 0, 'sources': ['Bund.de', 'TED Europa', 'State Portals']}",
+    "timestamp": "2026-02-02T16:38:19.218178",
+    "response_data": null
+  },
+  {
+    "test": "Scrape Permission Check",
+    "success": true,
+    "details": "Regular users correctly blocked from scraping",
+    "timestamp": "2026-02-02T16:38:19.234396",
+    "response_data": null
+  },
+  {
+    "test": "Get All Employees",
+    "success": true,
+    "details": "Retrieved 5 employees",
+    "timestamp": "2026-02-02T16:38:19.286998",
+    "response_data": null
+  },
+  {
+    "test": "Share Tender",
+    "success": true,
+    "details": "Tender shared successfully",
+    "timestamp": "2026-02-02T16:38:19.367505",
+    "response_data": null
+  },
+  {
+    "test": "Get Share Inbox",
+    "success": true,
+    "details": "Retrieved 0 shared tenders",
+    "timestamp": "2026-02-02T16:38:19.418832",
+    "response_data": null
+  },
+  {
+    "test": "Apply to Tender",
+    "success": true,
+    "details": "Successfully applied to tender",
+    "timestamp": "2026-02-02T16:38:19.487626",
+    "response_data": null
+  },
+  {
+    "test": "Update Application Status",
+    "success": true,
+    "details": "Status updated to Won",
+    "timestamp": "2026-02-02T16:38:19.500660",
+    "response_data": null
+  },
+  {
+    "test": "Get My Applications",
+    "success": true,
+    "details": "Retrieved 1 applications",
+    "timestamp": "2026-02-02T16:38:19.513466",
+    "response_data": null
+  },
+  {
+    "test": "Remove Application",
+    "success": true,
+    "details": "Successfully removed application",
+    "timestamp": "2026-02-02T16:38:19.568353",
+    "response_data": null
+  },
+  {
+    "test": "Get Tender Connections",
+    "success": true,
+    "details": "Found 3 relevant connections",
+    "timestamp": "2026-02-02T16:38:19.587834",
+    "response_data": null
+  },
+  {
+    "test": "Get Privacy Policy",
+    "success": true,
+    "details": "German privacy policy retrieved",
+    "timestamp": "2026-02-02T16:38:19.636927",
+    "response_data": null
+  },
+  {
+    "test": "Export Personal Data",
+    "success": true,
+    "details": "Data export successful (Article 20 compliance)",
+    "timestamp": "2026-02-02T16:38:19.648506",
+    "response_data": null
+  },
+  {
+    "test": "Account Deletion Safety",
+    "success": true,
+    "details": "Deletion requires confirmation (safety check)",
+    "timestamp": "2026-02-02T16:38:19.657412",
+    "response_data": null
+  },
+  {
+    "test": "Account Deletion",
+    "success": true,
+    "details": "Deletion endpoint available (not executed to preserve test account)",
+    "timestamp": "2026-02-02T16:38:19.657439",
+    "response_data": null
+  },
+  {
+    "test": "Get Tenders",
+    "success": true,
+    "details": "Retrieved 28 tenders",
+    "timestamp": "2026-02-02T16:38:19.667115",
+    "response_data": null
+  },
+  {
+    "test": "Building Typology Filter",
+    "success": true,
+    "details": "Found 3 healthcare tenders",
+    "timestamp": "2026-02-02T16:38:19.677433",
+    "response_data": null
+  },
+  {
+    "test": "Get Public Portals",
+    "success": true,
+    "details": "Retrieved 18 portals",
+    "timestamp": "2026-02-02T16:38:19.690281",
+    "response_data": null
+  }
+]
