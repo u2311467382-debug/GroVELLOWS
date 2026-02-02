@@ -2542,7 +2542,10 @@ async def startup_event():
     )
     
     scheduler.start()
-    logger.info("✅ Background scheduler started - Auto-scraping every 1 minute")
+    logger.info("✅ Background scheduler started:")
+    logger.info("   - Tenders scraping: every 1 minute")
+    logger.info("   - News scraping: every 5 minutes")
+    logger.info("   - Cleanup: every 5 minutes")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
