@@ -201,7 +201,21 @@ export default function TenderDetailScreen() {
             <View style={styles.categoryBadge}>
               <Text style={styles.categoryText}>{tender.category}</Text>
             </View>
+            {tender.building_typology && (
+              <View style={styles.typologyBadge}>
+                <Text style={styles.typologyText}>{tender.building_typology}</Text>
+              </View>
+            )}
           </View>
+
+          {tender.is_applied && (
+            <View style={styles.applicationStatus}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={styles.applicationStatusText}>
+                Applied - {tender.application_status}
+              </Text>
+            </View>
+          )}
 
           <Text style={styles.title}>{tender.title}</Text>
         </View>
