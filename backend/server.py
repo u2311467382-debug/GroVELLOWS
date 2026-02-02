@@ -51,6 +51,46 @@ security = HTTPBearer()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ============ SECURITY HELPERS ============
+
+def sanitize_input(text: str) -> str:
+    """Sanitize user input to prevent injection attacks"""
+    if not text:
+        return ""
+    # Remove potentially dangerous characters
+    text = re.sub(r'[<>"\';]', '', text)
+    # Limit length
+    return text[:5000]
+
+def validate_password(password: str) -> bool:
+    """Validate password strength - GDPR compliance"""
+    if len(password) < 8:
+        return False
+    if not re.search(r'[A-Z]', password):
+        return False
+    if not re.search(r'[a-z]', password):
+        return False
+    if not re.search(r'[0-9]', password):
+        return False
+    return True
+
+# ============ ROLE PERMISSIONS ============
+
+ROLE_PERMISSIONS = {
+    "Director": ["read", "write", "delete", "admin", "share", "scrape"],
+    "Partner": ["read", "write", "delete", "admin", "share"],
+    "Senior Project Manager": ["read", "write", "share"],
+    "Project Manager": ["read", "write", "share"],
+    "HR": ["read", "share"],
+    "Intern": ["read"],
+}
+
+def check_permission(user: dict, permission: str) -> bool:
+    """Check if user has specific permission"""
+    role = user.get("role", "Intern")
+    allowed = ROLE_PERMISSIONS.get(role, [])
+    return permission in allowed
+
 # ============ MODELS ============
 
 class UserRole(str):
@@ -61,12 +101,33 @@ class UserRole(str):
     PARTNER = "Partner"
     DIRECTOR = "Director"
 
+class EmployeeProfile(BaseModel):
+    """Extended employee profile for connections feature"""
+    department: Optional[str] = None
+    expertise: List[str] = []
+    previous_projects: List[str] = []
+    regions_experience: List[str] = []
+    authorities_experience: List[str] = []  # Contracting authorities they've worked with
+    phone: Optional[str] = None
+    office_location: Optional[str] = None
+
 class UserRegister(BaseModel):
     email: EmailStr
     password: str
     name: str
     role: str
     linkedin_url: Optional[str] = None
+    department: Optional[str] = None
+    
+    @validator('password')
+    def password_strength(cls, v):
+        if len(v) < 8:
+            raise ValueError('Password must be at least 8 characters')
+        return v
+    
+    @validator('email')
+    def email_sanitize(cls, v):
+        return v.lower().strip()
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -78,6 +139,8 @@ class User(BaseModel):
     name: str
     role: str
     linkedin_url: Optional[str] = None
+    department: Optional[str] = None
+    profile: Optional[EmployeeProfile] = None
     notification_preferences: dict = Field(default_factory=lambda: {
         "new_tenders": True,
         "status_changes": True,
@@ -87,6 +150,7 @@ class User(BaseModel):
     })
     gdpr_consent: Optional[dict] = None
     gdpr_consent_date: Optional[datetime] = None
+    is_active: bool = True
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class Token(BaseModel):
