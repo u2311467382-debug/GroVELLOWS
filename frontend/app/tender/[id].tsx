@@ -28,9 +28,19 @@ interface Tender {
   contact_details: any;
   tender_date: string;
   category: string;
+  building_typology?: string;
   platform_source: string;
   platform_url: string;
   status: string;
+  is_applied?: boolean;
+  application_status?: string;
+}
+
+interface Employee {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
 }
 
 const STATUS_COLORS = {
