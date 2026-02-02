@@ -382,6 +382,68 @@ export default function TenderDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Action Buttons */}
+        <View style={styles.actionSection}>
+          <TouchableOpacity 
+            style={[styles.actionButton, tender.is_applied && styles.actionButtonApplied]}
+            onPress={handleApply}
+            disabled={isApplying}
+          >
+            {isApplying ? (
+              <ActivityIndicator size="small" color={colors.textWhite} />
+            ) : (
+              <>
+                <Ionicons 
+                  name={tender.is_applied ? "checkmark-circle" : "send"} 
+                  size={20} 
+                  color={colors.textWhite} 
+                />
+                <Text style={styles.actionButtonText}>
+                  {tender.is_applied ? 'Applied' : 'Apply to Tender'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.shareButton}
+            onPress={() => setShowShareModal(true)}
+          >
+            <Ionicons name="share-social" size={20} color={colors.primary} />
+            <Text style={styles.shareButtonText}>Share with Team</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Employee List for Sharing */}
+        {showShareModal && (
+          <View style={styles.shareModal}>
+            <View style={styles.shareModalHeader}>
+              <Text style={styles.shareModalTitle}>Share with Team Member</Text>
+              <TouchableOpacity onPress={() => setShowShareModal(false)}>
+                <Ionicons name="close" size={24} color={colors.textDark} />
+              </TouchableOpacity>
+            </View>
+            {employees.map((emp) => (
+              <TouchableOpacity 
+                key={emp.id}
+                style={styles.employeeItem}
+                onPress={() => handleShare(emp.id, emp.name)}
+              >
+                <View style={styles.employeeAvatar}>
+                  <Text style={styles.employeeAvatarText}>
+                    {emp.name.split(' ').map(n => n[0]).join('')}
+                  </Text>
+                </View>
+                <View style={styles.employeeInfo}>
+                  <Text style={styles.employeeName}>{emp.name}</Text>
+                  <Text style={styles.employeeRole}>{emp.role}</Text>
+                </View>
+                <Ionicons name="arrow-forward" size={20} color={colors.textLight} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
