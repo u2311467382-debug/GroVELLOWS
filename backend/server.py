@@ -2512,6 +2512,7 @@ async def startup_event():
     await db.tenders.create_index("source_id", unique=True, sparse=True)
     await db.tenders.create_index("status")
     await db.tenders.create_index("deadline")
+    await db.news_articles.create_index("source_id", unique=True, sparse=True)
     await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
     await db.favorites.create_index([("user_id", 1), ("tender_id", 1)], unique=True)
     
@@ -2519,8 +2520,16 @@ async def startup_event():
     scheduler.add_job(
         auto_scrape_tenders,
         IntervalTrigger(minutes=1),
-        id="auto_scrape",
+        id="auto_scrape_tenders",
         name="Auto-scrape tenders every minute",
+        replace_existing=True
+    )
+    
+    scheduler.add_job(
+        auto_scrape_news,
+        IntervalTrigger(minutes=5),
+        id="auto_scrape_news",
+        name="Auto-scrape news every 5 minutes",
         replace_existing=True
     )
     
