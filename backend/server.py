@@ -863,23 +863,143 @@ async def get_users(
 
 @api_router.get("/news")
 async def get_news(
-    issue_type: Optional[str] = None,
-    severity: Optional[str] = None,
+    category: Optional[str] = None,
+    source: Optional[str] = None,
+    min_relevance: int = 0,
     current_user: dict = Depends(get_current_user)
 ):
+    """Get news articles from all sources (seeded + scraped)"""
     query = {}
     
-    if issue_type:
-        query["issue_type"] = issue_type
-    if severity:
-        query["severity"] = severity
+    if category:
+        query["category"] = category
+    if source:
+        query["source"] = {"$regex": source, "$options": "i"}
+    if min_relevance > 0:
+        query["relevance_score"] = {"$gte": min_relevance}
     
-    news = await db.news.find(query).sort("published_date", -1).to_list(1000)
+    # Get from both collections (legacy news and scraped news_articles)
+    news_legacy = await db.news.find({}).sort("published_date", -1).to_list(100)
+    news_scraped = await db.news_articles.find(query).sort("relevance_score", -1).to_list(100)
     
-    return [NewsArticle(
-        id=str(article["_id"]),
-        **{k: v for k, v in article.items() if k != "_id"}
-    ) for article in news]
+    all_news = []
+    
+    # Add scraped news first (more relevant)
+    for article in news_scraped:
+        all_news.append({
+            "id": str(article["_id"]),
+            "title": article.get("title", ""),
+            "summary": article.get("summary", ""),
+            "source": article.get("source", ""),
+            "url": article.get("url", ""),
+            "category": article.get("category", "General"),
+            "relevance_score": article.get("relevance_score", 50),
+            "published_at": article.get("published_at"),
+            "scraped_at": article.get("scraped_at"),
+        })
+    
+    # Add legacy news
+    for article in news_legacy:
+        all_news.append({
+            "id": str(article["_id"]),
+            "title": article.get("title", ""),
+            "summary": article.get("summary", article.get("description", "")),
+            "source": article.get("source", ""),
+            "url": article.get("url", ""),
+            "category": article.get("category", article.get("issue_type", "General")),
+            "relevance_score": article.get("relevance_score", 50),
+            "published_at": article.get("published_at", article.get("published_date")),
+        })
+    
+    # Sort by relevance
+    all_news.sort(key=lambda x: x.get("relevance_score", 0), reverse=True)
+    
+    return all_news[:100]
+
+@api_router.post("/news/scrape")
+@limiter.limit("1/5minutes")
+async def scrape_news_manual(
+    request: Request,
+    max_per_source: int = 15,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Manually trigger news scraping from all sources.
+    Only Directors and Partners can initiate scraping.
+    """
+    if not check_permission(current_user, "admin"):
+        raise HTTPException(
+            status_code=403, 
+            detail="Only Directors and Partners can initiate news scraping"
+        )
+    
+    try:
+        from news_scraper import scrape_all_news
+        
+        logger.info(f"📰 Manual news scrape initiated by {current_user['email']}")
+        
+        # Get existing source_ids
+        existing_ids = set()
+        async for article in db.news_articles.find({}, {"source_id": 1}):
+            if article.get("source_id"):
+                existing_ids.add(article["source_id"])
+        
+        # Scrape all news sources
+        scraped_news = await scrape_all_news(max_per_source=max_per_source)
+        
+        inserted = 0
+        duplicates = 0
+        
+        for article in scraped_news:
+            source_id = article.get("source_id", "")
+            if source_id and source_id not in existing_ids:
+                await db.news_articles.insert_one(article)
+                inserted += 1
+                existing_ids.add(source_id)
+            else:
+                duplicates += 1
+        
+        logger.info(f"📰 News scrape complete: {inserted} new articles, {duplicates} duplicates")
+        
+        return {
+            "message": "News scraping complete",
+            "count": inserted,
+            "duplicates_skipped": duplicates,
+            "sources": ["BauNetz", "Immobilien Zeitung", "Deutsche BauZeitschrift", "Handelsblatt", "Baublatt", "Property Magazine"]
+        }
+        
+    except ImportError:
+        raise HTTPException(status_code=500, detail="News scraper module not available")
+    except Exception as e:
+        logger.error(f"News scraping error: {e}")
+        raise HTTPException(status_code=500, detail=f"News scraping failed: {str(e)}")
+
+@api_router.get("/news/status")
+async def get_news_status(current_user: dict = Depends(get_current_user)):
+    """Get news scraping status and statistics"""
+    scraped_count = await db.news_articles.count_documents({})
+    legacy_count = await db.news.count_documents({})
+    
+    # Get sources breakdown
+    sources = {}
+    async for article in db.news_articles.aggregate([
+        {"$group": {"_id": "$source", "count": {"$sum": 1}}}
+    ]):
+        sources[article["_id"]] = article["count"]
+    
+    # Get latest scraped article
+    latest = await db.news_articles.find_one(
+        {"scraped_at": {"$exists": True}},
+        sort=[("scraped_at", -1)]
+    )
+    
+    return {
+        "total_articles": scraped_count + legacy_count,
+        "scraped_articles": scraped_count,
+        "legacy_articles": legacy_count,
+        "last_scrape": latest.get("scraped_at") if latest else None,
+        "sources": sources
+    }
 
 @api_router.get("/news/{news_id}")
 async def get_news_article(
