@@ -2351,7 +2351,7 @@ async def auto_scrape_tenders():
     try:
         from scraper import scrape_all_portals
         
-        logger.info("🔄 Auto-scrape started...")
+        logger.info("🔄 Auto-scrape tenders started...")
         
         # Get existing source_ids to detect new tenders
         existing_ids = set()
@@ -2390,12 +2390,69 @@ async def auto_scrape_tenders():
                 }
                 await db.notifications.insert_one(notification)
             
-            logger.info(f"✅ Auto-scrape complete: {new_count} new tenders, {len(users)} users notified")
+            logger.info(f"✅ Auto-scrape tenders complete: {new_count} new tenders, {len(users)} users notified")
         else:
-            logger.info("✅ Auto-scrape complete: No new tenders found")
+            logger.info("✅ Auto-scrape tenders complete: No new tenders found")
             
     except Exception as e:
-        logger.error(f"❌ Auto-scrape error: {e}")
+        logger.error(f"❌ Auto-scrape tenders error: {e}")
+
+async def auto_scrape_news():
+    """
+    Background task that runs every 5 minutes to scrape construction news.
+    Creates notifications for important news found.
+    """
+    try:
+        from news_scraper import scrape_all_news
+        
+        logger.info("📰 Auto-scrape news started...")
+        
+        # Get existing source_ids to detect new news
+        existing_ids = set()
+        async for article in db.news_articles.find({}, {"source_id": 1}):
+            if article.get("source_id"):
+                existing_ids.add(article["source_id"])
+        
+        # Scrape all news sources
+        scraped_news = await scrape_all_news(max_per_source=15)
+        
+        new_count = 0
+        new_articles = []
+        high_relevance_articles = []
+        
+        for article in scraped_news:
+            source_id = article.get("source_id", "")
+            if source_id and source_id not in existing_ids:
+                await db.news_articles.insert_one(article)
+                new_count += 1
+                new_articles.append(article)
+                existing_ids.add(source_id)
+                
+                # Track high relevance articles (stuck projects, major news)
+                if article.get("relevance_score", 0) >= 80:
+                    high_relevance_articles.append(article)
+        
+        # Create notifications for high-relevance news
+        if high_relevance_articles:
+            users = await db.users.find({}).to_list(1000)
+            
+            for user in users:
+                notification = {
+                    "user_id": str(user["_id"]),
+                    "type": "important_news",
+                    "title": f"📰 {len(high_relevance_articles)} wichtige Baunachrichten",
+                    "message": "Neue relevante Nachrichten aus der Baubranche gefunden.",
+                    "articles": [{"title": a.get("title", "")[:50], "source": a.get("source", "")} for a in high_relevance_articles[:3]],
+                    "is_read": False,
+                    "sound": False,  # Silent notification
+                    "created_at": datetime.utcnow()
+                }
+                await db.notifications.insert_one(notification)
+        
+        logger.info(f"✅ Auto-scrape news complete: {new_count} new articles, {len(high_relevance_articles)} high relevance")
+            
+    except Exception as e:
+        logger.error(f"❌ Auto-scrape news error: {e}")
 
 async def cleanup_awarded_tenders():
     """
