@@ -2246,6 +2246,241 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ============ BACKGROUND TASKS ============
+
+async def auto_scrape_tenders():
+    """
+    Background task that runs every minute to scrape new tenders.
+    Creates notifications for new tenders found.
+    """
+    try:
+        from scraper import scrape_all_portals
+        
+        logger.info("🔄 Auto-scrape started...")
+        
+        # Get existing source_ids to detect new tenders
+        existing_ids = set()
+        async for tender in db.tenders.find({}, {"source_id": 1}):
+            if tender.get("source_id"):
+                existing_ids.add(tender["source_id"])
+        
+        # Scrape all portals
+        scraped_tenders = await scrape_all_portals(max_per_portal=30)
+        
+        new_count = 0
+        new_tenders = []
+        
+        for tender in scraped_tenders:
+            source_id = tender.get("source_id", "")
+            if source_id and source_id not in existing_ids:
+                await db.tenders.insert_one(tender)
+                new_count += 1
+                new_tenders.append(tender)
+                existing_ids.add(source_id)
+        
+        # Create notifications for all users about new tenders
+        if new_count > 0:
+            users = await db.users.find({"notification_preferences.new_tenders": True}).to_list(1000)
+            
+            for user in users:
+                notification = {
+                    "user_id": str(user["_id"]),
+                    "type": "new_tenders",
+                    "title": f"🆕 {new_count} neue Ausschreibungen gefunden",
+                    "message": f"{new_count} neue Ausschreibungen wurden automatisch hinzugefügt.",
+                    "tenders": [{"id": str(t.get("_id", "")), "title": t.get("title", "")[:50]} for t in new_tenders[:5]],
+                    "is_read": False,
+                    "sound": False,  # Silent notification
+                    "created_at": datetime.utcnow()
+                }
+                await db.notifications.insert_one(notification)
+            
+            logger.info(f"✅ Auto-scrape complete: {new_count} new tenders, {len(users)} users notified")
+        else:
+            logger.info("✅ Auto-scrape complete: No new tenders found")
+            
+    except Exception as e:
+        logger.error(f"❌ Auto-scrape error: {e}")
+
+async def cleanup_awarded_tenders():
+    """
+    Background task that runs every 5 minutes to clean up awarded/closed tenders.
+    Only removes tenders that are NOT in any user's favorites.
+    """
+    try:
+        logger.info("🧹 Cleanup task started...")
+        
+        # Get all favorite tender IDs
+        favorite_tender_ids = set()
+        async for fav in db.favorites.find({}, {"tender_id": 1}):
+            favorite_tender_ids.add(fav.get("tender_id"))
+        
+        # Find awarded/closed tenders that are NOT favorited
+        # Status: Closed OR application_status: Won/Lost
+        query = {
+            "$or": [
+                {"status": "Closed"},
+                {"application_status": {"$in": ["Won", "Lost"]}},
+                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=7)}}  # Expired > 7 days
+            ]
+        }
+        
+        deleted_count = 0
+        async for tender in db.tenders.find(query):
+            tender_id = str(tender["_id"])
+            
+            # Skip if in anyone's favorites
+            if tender_id in favorite_tender_ids:
+                continue
+            
+            # Skip if user has applied to it
+            if tender.get("applied_by") and len(tender.get("applied_by", [])) > 0:
+                continue
+            
+            # Delete the tender
+            await db.tenders.delete_one({"_id": tender["_id"]})
+            deleted_count += 1
+        
+        if deleted_count > 0:
+            logger.info(f"🧹 Cleanup complete: {deleted_count} awarded/expired tenders removed")
+        else:
+            logger.info("🧹 Cleanup complete: No tenders to remove")
+            
+    except Exception as e:
+        logger.error(f"❌ Cleanup error: {e}")
+
+# ============ NOTIFICATION ENDPOINTS ============
+
+@api_router.get("/notifications")
+async def get_notifications(
+    unread_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get user's notifications (silent - no ringtone)"""
+    query = {"user_id": str(current_user["_id"])}
+    if unread_only:
+        query["is_read"] = False
+    
+    notifications = await db.notifications.find(query).sort("created_at", -1).to_list(50)
+    
+    return [{
+        "id": str(n["_id"]),
+        "type": n.get("type"),
+        "title": n.get("title"),
+        "message": n.get("message"),
+        "tenders": n.get("tenders", []),
+        "is_read": n.get("is_read", False),
+        "sound": n.get("sound", False),
+        "created_at": n.get("created_at")
+    } for n in notifications]
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(
+    notification_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Mark notification as read"""
+    await db.notifications.update_one(
+        {"_id": ObjectId(notification_id), "user_id": str(current_user["_id"])},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
+    """Mark all notifications as read"""
+    await db.notifications.update_many(
+        {"user_id": str(current_user["_id"])},
+        {"$set": {"is_read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+@api_router.get("/notifications/count")
+async def get_unread_count(current_user: dict = Depends(get_current_user)):
+    """Get unread notification count"""
+    count = await db.notifications.count_documents({
+        "user_id": str(current_user["_id"]),
+        "is_read": False
+    })
+    return {"unread_count": count}
+
+# ============ SCRAPE SETTINGS ============
+
+@api_router.get("/scrape/settings")
+async def get_scrape_settings(current_user: dict = Depends(get_current_user)):
+    """Get auto-scrape settings"""
+    settings = await db.scrape_settings.find_one({}) or {
+        "auto_scrape_enabled": True,
+        "interval_minutes": 1,
+        "last_scrape": None,
+        "total_scraped": 0
+    }
+    return {
+        "auto_scrape_enabled": settings.get("auto_scrape_enabled", True),
+        "interval_minutes": settings.get("interval_minutes", 1),
+        "last_scrape": settings.get("last_scrape"),
+        "total_scraped": settings.get("total_scraped", 0)
+    }
+
+@api_router.put("/scrape/settings")
+async def update_scrape_settings(
+    enabled: bool = True,
+    interval_minutes: int = 1,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update auto-scrape settings (Directors only)"""
+    if not check_permission(current_user, "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    await db.scrape_settings.update_one(
+        {},
+        {"$set": {
+            "auto_scrape_enabled": enabled,
+            "interval_minutes": max(1, min(60, interval_minutes)),
+            "updated_at": datetime.utcnow()
+        }},
+        upsert=True
+    )
+    
+    return {"message": f"Auto-scrape {'enabled' if enabled else 'disabled'}, interval: {interval_minutes} min"}
+
+# ============ APP LIFECYCLE EVENTS ============
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize background tasks on startup"""
+    logger.info("🚀 Starting GroVELLOWS API Server...")
+    
+    # Create indexes for better performance
+    await db.tenders.create_index("source_id", unique=True, sparse=True)
+    await db.tenders.create_index("status")
+    await db.tenders.create_index("deadline")
+    await db.notifications.create_index([("user_id", 1), ("is_read", 1)])
+    await db.favorites.create_index([("user_id", 1), ("tender_id", 1)], unique=True)
+    
+    # Start background scheduler
+    scheduler.add_job(
+        auto_scrape_tenders,
+        IntervalTrigger(minutes=1),
+        id="auto_scrape",
+        name="Auto-scrape tenders every minute",
+        replace_existing=True
+    )
+    
+    scheduler.add_job(
+        cleanup_awarded_tenders,
+        IntervalTrigger(minutes=5),
+        id="cleanup_tenders",
+        name="Cleanup awarded tenders every 5 minutes",
+        replace_existing=True
+    )
+    
+    scheduler.start()
+    logger.info("✅ Background scheduler started - Auto-scraping every 1 minute")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    """Cleanup on shutdown"""
+    scheduler.shutdown()
     client.close()
+    logger.info("👋 GroVELLOWS API Server shutdown complete")
