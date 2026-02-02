@@ -15,9 +15,12 @@ import jwt
 import bcrypt
 import re
 import hashlib
+import asyncio
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -34,6 +37,9 @@ ACCESS_TOKEN_EXPIRE_DAYS = 7  # Reduced for security
 
 # Rate Limiting
 limiter = Limiter(key_func=get_remote_address)
+
+# Background Scheduler for auto-scraping
+scheduler = AsyncIOScheduler()
 
 # Create the main app
 app = FastAPI(
