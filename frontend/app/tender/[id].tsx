@@ -55,9 +55,13 @@ export default function TenderDetailScreen() {
   const [tender, setTender] = useState<Tender | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
 
   useEffect(() => {
     fetchTenderDetail();
+    fetchEmployees();
   }, [id]);
 
   const fetchTenderDetail = async () => {
@@ -69,6 +73,15 @@ export default function TenderDetailScreen() {
       Alert.alert('Error', 'Failed to load tender details');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await api.get('/employees');
+      setEmployees(response.data);
+    } catch (error) {
+      console.error('Failed to fetch employees:', error);
     }
   };
 
@@ -85,6 +98,40 @@ export default function TenderDetailScreen() {
       }
     } catch (error) {
       console.error('Failed to toggle favorite:', error);
+    }
+  };
+
+  const handleApply = async () => {
+    if (!tender) return;
+    try {
+      setIsApplying(true);
+      if (tender.is_applied) {
+        await api.delete(`/tenders/${id}/apply`);
+        setTender({ ...tender, is_applied: false, application_status: 'Not Applied' });
+        Alert.alert('Success', 'Application removed');
+      } else {
+        await api.post(`/tenders/${id}/apply`);
+        setTender({ ...tender, is_applied: true, application_status: 'Awaiting Results' });
+        Alert.alert('Success', 'Application recorded! Status: Awaiting Results');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update application');
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  const handleShare = async (recipientId: string, recipientName: string) => {
+    try {
+      await api.post('/share/tender', {
+        tender_id: id,
+        recipient_ids: [recipientId],
+        message: `Check out this tender: ${tender?.title}`
+      });
+      Alert.alert('Shared!', `Tender shared with ${recipientName}`);
+      setShowShareModal(false);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share tender');
     }
   };
 
