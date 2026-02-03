@@ -101,7 +101,8 @@ export default function NewsScreen() {
           </View>
         </View>
         <Text style={styles.dateText}>
-          {format(new Date(item.published_date), 'dd MMM yyyy')}
+          {item.published_at ? format(new Date(item.published_at), 'dd MMM yyyy') : 
+           item.published_date ? format(new Date(item.published_date), 'dd MMM yyyy') : 'Recent'}
         </Text>
       </View>
 
