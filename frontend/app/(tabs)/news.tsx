@@ -91,12 +91,12 @@ export default function NewsScreen() {
           </View>
           <View style={styles.typeBadge}>
             <Ionicons
-              name={ISSUE_ICONS[item.issue_type as keyof typeof ISSUE_ICONS] as any}
+              name={ISSUE_ICONS[(item.issue_type || item.category || 'General') as keyof typeof ISSUE_ICONS] || 'newspaper'}
               size={14}
               color={colors.primary}
             />
             <Text style={styles.typeText}>
-              {t(`news.issueTypes.${item.issue_type}`)}
+              {item.category || item.issue_type || 'News'}
             </Text>
           </View>
         </View>
