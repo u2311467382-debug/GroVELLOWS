@@ -202,8 +202,32 @@ export default function NewsScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Project Typology Filter */}
+      <View style={styles.filterContainer}>
+        <Text style={styles.filterTitle}>Projekte Typologie</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll}>
+          {PROJECT_TYPOLOGIES.map((typology) => (
+            <TouchableOpacity
+              key={typology}
+              style={[
+                styles.filterChip,
+                selectedTypology === typology && styles.filterChipActive
+              ]}
+              onPress={() => setSelectedTypology(typology)}
+            >
+              <Text style={[
+                styles.filterChipText,
+                selectedTypology === typology && styles.filterChipTextActive
+              ]}>
+                {typology}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+
       <FlatList
-        data={news}
+        data={filteredNews}
         renderItem={renderNewsCard}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
