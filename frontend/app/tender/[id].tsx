@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,17 @@ import {
   ActivityIndicator,
   Alert,
   Linking,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  FlatList,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../utils/colors';
 import api from '../../utils/api';
 import { format } from 'date-fns';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Tender {
   id: string;
@@ -34,6 +39,8 @@ interface Tender {
   status: string;
   is_applied?: boolean;
   application_status?: string;
+  claimed_by?: string;
+  claimed_by_name?: string;
 }
 
 interface Employee {
@@ -41,6 +48,14 @@ interface Employee {
   name: string;
   email: string;
   role: string;
+}
+
+interface ChatMessage {
+  id: string;
+  user_id: string;
+  user_name: string;
+  message: string;
+  created_at: string;
 }
 
 const STATUS_COLORS = {
