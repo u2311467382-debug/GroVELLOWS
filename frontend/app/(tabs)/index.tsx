@@ -219,15 +219,8 @@ export default function TendersScreen() {
           />
           <Text style={styles.statusText}>{item.status}</Text>
         </View>
-        <View style={styles.badgesRow}>
-          {item.building_typology && (
-            <View style={styles.typologyBadge}>
-              <Text style={styles.typologyText} numberOfLines={1}>{item.building_typology}</Text>
-            </View>
-          )}
-          <View style={styles.categoryBadge}>
-            <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
-          </View>
+        <View style={styles.categoryBadge}>
+          <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
         </View>
       </View>
 
@@ -245,8 +238,8 @@ export default function TendersScreen() {
           <Text style={[styles.detailText, styles.budgetText]}>{item.budget}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="calendar" size={14} color={colors.error} />
-          <Text style={styles.detailText}>
+          <Ionicons name="calendar" size={14} color="#E65100"} />
+          <Text style={[styles.detailText, styles.deadlineText]}>
             {format(new Date(item.deadline), 'dd MMM yyyy')}
           </Text>
         </View>
@@ -254,31 +247,7 @@ export default function TendersScreen() {
 
       <View style={styles.cardFooter}>
         <Text style={styles.platformText} numberOfLines={1}>{item.platform_source}</Text>
-        <TouchableOpacity 
-          style={[
-            styles.applyButton,
-            item.is_applied && styles.appliedButton
-          ]}
-          onPress={(e) => {
-            e.stopPropagation();
-            handleApply(item.id, item.is_applied || false);
-          }}
-          disabled={applyingId === item.id}
-        >
-          {applyingId === item.id ? (
-            <ActivityIndicator size="small" color={colors.textWhite} />
-          ) : (
-            <>
-              <Ionicons 
-                name={item.is_applied ? "checkmark-circle" : "send"} 
-                size={14} 
-                color={colors.textWhite} 
-              />
-              <Text style={styles.applyButtonText}>
-                {item.is_applied ? 'Applied' : 'Apply'}
-              </Text>
-            </>
-          )}
+        <Ionicons name="chevron-forward" size={20} color={colors.primary} />          )}
         </TouchableOpacity>
       </View>
     </TouchableOpacity>
