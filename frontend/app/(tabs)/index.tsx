@@ -238,7 +238,7 @@ export default function TendersScreen() {
           <Text style={[styles.detailText, styles.budgetText]}>{item.budget}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Ionicons name="calendar" size={14} color="#E65100"} />
+          <Ionicons name="calendar" size={14} color="#E65100" />
           <Text style={[styles.detailText, styles.deadlineText]}>
             {format(new Date(item.deadline), 'dd MMM yyyy')}
           </Text>
@@ -247,8 +247,7 @@ export default function TendersScreen() {
 
       <View style={styles.cardFooter}>
         <Text style={styles.platformText} numberOfLines={1}>{item.platform_source}</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.primary} />          )}
-        </TouchableOpacity>
+        <Ionicons name="chevron-forward" size={20} color={colors.primary} />
       </View>
     </TouchableOpacity>
   );
