@@ -349,6 +349,22 @@ export default function TendersScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            style={[styles.quickFilterChip, selectedTypology === 'Infrastructure' && styles.quickFilterChipActive]}
+            onPress={() => setSelectedTypology(selectedTypology === 'Infrastructure' ? 'All' : 'Infrastructure')}
+          >
+            <Ionicons name="business" size={14} color={selectedTypology === 'Infrastructure' ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypology === 'Infrastructure' && styles.quickFilterTextActive]}>Infrastruktur</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickFilterChip, selectedTypology === 'Bauprojekt' && styles.quickFilterChipActive]}
+            onPress={() => setSelectedTypology(selectedTypology === 'Bauprojekt' ? 'All' : 'Bauprojekt')}
+          >
+            <Ionicons name="construct" size={14} color={selectedTypology === 'Bauprojekt' ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypology === 'Bauprojekt' && styles.quickFilterTextActive]}>Bauprojekt</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
             style={[styles.quickFilterChip, viewMode === 'compact' && styles.quickFilterChipActive]}
             onPress={() => setViewMode(viewMode === 'list' ? 'compact' : 'list')}
           >
