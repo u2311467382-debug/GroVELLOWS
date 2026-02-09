@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Linking,
+  ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,15 +20,19 @@ import { useTranslation } from 'react-i18next';
 interface NewsArticle {
   id: string;
   title: string;
-  description: string;
-  content: string;
+  description?: string;
+  summary?: string;
+  content?: string;
   source: string;
   url: string;
   project_name?: string;
   location?: string;
-  issue_type: string;
-  severity: string;
-  published_date: string;
+  issue_type?: string;
+  category?: string;
+  severity?: string;
+  relevance_score?: number;
+  published_date?: string;
+  published_at?: string;
 }
 
 const SEVERITY_COLORS = {
@@ -36,17 +41,32 @@ const SEVERITY_COLORS = {
   low: colors.info,
 };
 
-const ISSUE_ICONS = {
+const ISSUE_ICONS: { [key: string]: string } = {
   stuck: 'alert-circle',
   underperforming: 'trending-down',
   opportunity: 'rocket',
   general: 'newspaper',
+  'Project Issues': 'alert-circle',
+  'New Projects': 'add-circle',
+  'Tenders & Contracts': 'document-text',
+  'Market Analysis': 'analytics',
+  'Regulations': 'shield-checkmark',
+  'Sustainability': 'leaf',
+  'Technology': 'hardware-chip',
+  'General': 'newspaper',
 };
+
+const PROJECT_TYPOLOGIES = [
+  'Alle', 'Wohnungsbau', 'Gewerbebau', 'Infrastruktur', 
+  'Gesundheitswesen', 'Bildung', 'Industrie'
+];
 
 export default function NewsScreen() {
   const [news, setNews] = useState<NewsArticle[]>([]);
+  const [filteredNews, setFilteredNews] = useState<NewsArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedTypology, setSelectedTypology] = useState('Alle');
   const router = useRouter();
   const { t } = useTranslation();
 
