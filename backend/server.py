@@ -702,6 +702,106 @@ async def update_application_status(
     
     return {"message": f"Application status updated to {status}"}
 
+# ============ TENDER CLAIM ENDPOINTS ============
+
+@api_router.post("/tenders/{tender_id}/claim")
+async def claim_tender(
+    tender_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Claim a tender to indicate someone is working on it"""
+    tender = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    if tender.get("claimed_by"):
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Tender already claimed by {tender.get('claimed_by_name', 'someone')}"
+        )
+    
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {"$set": {
+            "claimed_by": str(current_user["_id"]),
+            "claimed_by_name": current_user.get("name", "Unknown"),
+            "claimed_at": datetime.utcnow()
+        }}
+    )
+    
+    return {"message": "Tender claimed successfully", "claimed_by": current_user.get("name")}
+
+@api_router.delete("/tenders/{tender_id}/claim")
+async def unclaim_tender(
+    tender_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Release claim on a tender"""
+    tender = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    # Only the claimer or admin can release
+    if tender.get("claimed_by") != str(current_user["_id"]) and not check_permission(current_user, "admin"):
+        raise HTTPException(status_code=403, detail="Only the claimer can release this tender")
+    
+    await db.tenders.update_one(
+        {"_id": ObjectId(tender_id)},
+        {"$unset": {"claimed_by": "", "claimed_by_name": "", "claimed_at": ""}}
+    )
+    
+    return {"message": "Tender released successfully"}
+
+# ============ TENDER CHAT ENDPOINTS ============
+
+class ChatMessage(BaseModel):
+    message: str
+
+@api_router.get("/tenders/{tender_id}/chat")
+async def get_tender_chat(
+    tender_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get chat messages for a tender"""
+    messages = await db.tender_chats.find(
+        {"tender_id": tender_id}
+    ).sort("created_at", 1).to_list(100)
+    
+    return [{
+        "id": str(msg["_id"]),
+        "user_id": msg.get("user_id"),
+        "user_name": msg.get("user_name"),
+        "message": msg.get("message"),
+        "created_at": msg.get("created_at")
+    } for msg in messages]
+
+@api_router.post("/tenders/{tender_id}/chat")
+async def post_tender_chat(
+    tender_id: str,
+    chat: ChatMessage,
+    current_user: dict = Depends(get_current_user)
+):
+    """Post a chat message for a tender"""
+    tender = await db.tenders.find_one({"_id": ObjectId(tender_id)})
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    message_doc = {
+        "tender_id": tender_id,
+        "user_id": str(current_user["_id"]),
+        "user_name": current_user.get("name", "Unknown"),
+        "message": sanitize_input(chat.message),
+        "created_at": datetime.utcnow()
+    }
+    
+    result = await db.tender_chats.insert_one(message_doc)
+    
+    return {
+        "id": str(result.inserted_id),
+        "message": "Message sent",
+        "created_at": message_doc["created_at"]
+    }
+
 @api_router.get("/my-applications")
 async def get_my_applications(
     application_status: Optional[str] = None,
