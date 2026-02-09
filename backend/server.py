@@ -24,6 +24,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from fastapi.encoders import jsonable_encoder
 from bson import json_util
 from fastapi.responses import JSONResponse
+from fastapi.encoders import ENCODERS_BY_TYPE
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -55,14 +56,11 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
-# Custom JSON encoder for ObjectId
-def custom_jsonable_encoder(obj, **kwargs):
-    if isinstance(obj, ObjectId):
-        return str(obj)
-    return jsonable_encoder(obj, **kwargs)
+# Register ObjectId encoder globally
+ENCODERS_BY_TYPE[ObjectId] = str
 
-# Override default JSON response
-class ObjectIdJSONResponse(JSONResponse):
+# Optional: Also register custom JSON response for any remaining edge cases
+class BSONJSONResponse(JSONResponse):
     def render(self, content) -> bytes:
         return json_util.dumps(content, ensure_ascii=False).encode('utf-8')
 
