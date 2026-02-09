@@ -57,7 +57,7 @@ const CATEGORIES = [
 
 const BUILDING_TYPOLOGIES = [
   'All', 'Residential', 'Commercial', 'Mixed-Use', 'Healthcare', 
-  'Data Center', 'Infrastructure', 'Industrial'
+  'Data Center', 'Infrastructure', 'Industrial', 'Bauprojekt'
 ];
 
 const STATUSES = ['All', 'New', 'In Progress', 'Closed'];
