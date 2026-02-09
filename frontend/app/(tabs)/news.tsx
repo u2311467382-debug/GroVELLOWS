@@ -74,6 +74,10 @@ export default function NewsScreen() {
     fetchNews();
   }, []);
 
+  useEffect(() => {
+    filterNews();
+  }, [news, selectedTypology]);
+
   const fetchNews = async () => {
     try {
       const response = await api.get('/news');
@@ -84,6 +88,30 @@ export default function NewsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const filterNews = () => {
+    if (selectedTypology === 'Alle') {
+      setFilteredNews(news);
+      return;
+    }
+
+    const typologyKeywords: { [key: string]: string[] } = {
+      'Wohnungsbau': ['wohn', 'residential', 'apartment', 'wohnung', 'miete'],
+      'Gewerbebau': ['gewerbe', 'commercial', 'büro', 'office', 'retail'],
+      'Infrastruktur': ['infrastruktur', 'infrastructure', 'brücke', 'tunnel', 'straße', 'bahn'],
+      'Gesundheitswesen': ['krankenhaus', 'hospital', 'klinik', 'health', 'medizin'],
+      'Bildung': ['schule', 'school', 'universität', 'university', 'bildung'],
+      'Industrie': ['industrie', 'industrial', 'fabrik', 'werk', 'produktion'],
+    };
+
+    const keywords = typologyKeywords[selectedTypology] || [];
+    const filtered = news.filter(article => {
+      const text = `${article.title} ${article.summary || article.description || ''}`.toLowerCase();
+      return keywords.some(keyword => text.includes(keyword));
+    });
+    
+    setFilteredNews(filtered);
   };
 
   const onRefresh = useCallback(() => {
