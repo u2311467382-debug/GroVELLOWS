@@ -21,6 +21,9 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from fastapi.encoders import jsonable_encoder
+from bson import json_util
+from fastapi.responses import JSONResponse
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -52,6 +55,19 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer()
+# Custom JSON encoder for ObjectId
+def custom_jsonable_encoder(obj, **kwargs):
+    if isinstance(obj, ObjectId):
+        return str(obj)
+    return jsonable_encoder(obj, **kwargs)
+
+# Override default JSON response
+class ObjectIdJSONResponse(JSONResponse):
+    def render(self, content) -> bytes:
+        return json_util.dumps(content, ensure_ascii=False).encode('utf-8')
+
+# Set as default response class
+app.default_response_class = ObjectIdJSONResponse
 
 # Logging
 logging.basicConfig(level=logging.INFO)
