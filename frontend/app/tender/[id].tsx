@@ -67,16 +67,27 @@ const STATUS_COLORS = {
 export default function TenderDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [tender, setTender] = useState<Tender | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFavorite, setIsFavorite] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [showChat, setShowChat] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+  const chatScrollRef = useRef<ScrollView>(null);
+
+  const canShare = user?.role === 'Director' || user?.role === 'Partner';
 
   useEffect(() => {
     fetchTenderDetail();
     fetchEmployees();
+    fetchChatMessages();
   }, [id]);
 
   const fetchTenderDetail = async () => {
@@ -97,6 +108,15 @@ export default function TenderDetailScreen() {
       setEmployees(response.data);
     } catch (error) {
       console.error('Failed to fetch employees:', error);
+    }
+  };
+
+  const fetchChatMessages = async () => {
+    try {
+      const response = await api.get(`/tenders/${id}/chat`);
+      setChatMessages(response.data);
+    } catch (error) {
+      console.error('Failed to fetch chat:', error);
     }
   };
 
@@ -133,6 +153,73 @@ export default function TenderDetailScreen() {
       Alert.alert('Error', 'Failed to update application');
     } finally {
       setIsApplying(false);
+    }
+  };
+
+  const handleClaim = async () => {
+    if (!tender) return;
+    try {
+      setIsClaiming(true);
+      if (tender.claimed_by) {
+        // Already claimed - unclaim only if it's the same user
+        if (tender.claimed_by === user?.id) {
+          await api.delete(`/tenders/${id}/claim`);
+          setTender({ ...tender, claimed_by: undefined, claimed_by_name: undefined });
+          Alert.alert('Success', 'You have released this tender');
+        } else {
+          Alert.alert('Info', `This tender is being handled by ${tender.claimed_by_name}`);
+        }
+      } else {
+        await api.post(`/tenders/${id}/claim`);
+        setTender({ ...tender, claimed_by: user?.id, claimed_by_name: user?.name });
+        Alert.alert('Success', 'You are now working on this tender');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update claim status');
+    } finally {
+      setIsClaiming(false);
+    }
+  };
+
+  const toggleEmployeeSelection = (empId: string) => {
+    setSelectedEmployees(prev => 
+      prev.includes(empId) 
+        ? prev.filter(id => id !== empId)
+        : [...prev, empId]
+    );
+  };
+
+  const handleShareToSelected = async () => {
+    if (selectedEmployees.length === 0) {
+      Alert.alert('Select Employees', 'Please select at least one team member to share with');
+      return;
+    }
+    try {
+      await api.post('/share/tender', {
+        tender_id: id,
+        recipient_ids: selectedEmployees,
+        message: `Tender shared: ${tender?.title}`
+      });
+      Alert.alert('Shared!', `Tender shared with ${selectedEmployees.length} team member(s)`);
+      setShowShareModal(false);
+      setSelectedEmployees([]);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to share tender');
+    }
+  };
+
+  const handleSendMessage = async () => {
+    if (!newMessage.trim()) return;
+    try {
+      setSendingMessage(true);
+      await api.post(`/tenders/${id}/chat`, { message: newMessage.trim() });
+      setNewMessage('');
+      fetchChatMessages();
+      setTimeout(() => chatScrollRef.current?.scrollToEnd({ animated: true }), 100);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send message');
+    } finally {
+      setSendingMessage(false);
     }
   };
 
