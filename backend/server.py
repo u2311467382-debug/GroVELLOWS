@@ -64,9 +64,6 @@ class BSONJSONResponse(JSONResponse):
     def render(self, content) -> bytes:
         return json_util.dumps(content, ensure_ascii=False).encode('utf-8')
 
-# Set as default response class
-app.default_response_class = ObjectIdJSONResponse
-
 # Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
