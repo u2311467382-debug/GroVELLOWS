@@ -2707,6 +2707,10 @@ async def auto_scrape_tenders():
                 }
                 await db.notifications.insert_one(notification)
             
+            # Send push notifications for each new tender (like WhatsApp)
+            for tender in new_tenders[:3]:  # Limit to 3 push notifications
+                await notify_users_new_tender(tender)
+            
             logger.info(f"✅ Auto-scrape tenders complete: {new_count} new tenders, {len(users)} users notified")
         else:
             logger.info("✅ Auto-scrape tenders complete: No new tenders found")
