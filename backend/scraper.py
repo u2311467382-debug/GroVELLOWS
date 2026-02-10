@@ -106,8 +106,14 @@ class TenderScraper:
         # Category detection - focused on construction project management services
         category = "General"
         
+        # Integrierte Projektabwicklung (German term for IPA)
+        if any(word in text for word in ['integrierte projektabwicklung', 'ipa verfahren', 'allianzvertrag', 'projektallianzen']):
+            category = "Integrierte Projektabwicklung"
+        # Integrated Project Management
+        elif any(word in text for word in ['integrated project management', 'integriertes projektmanagement', 'gesamtprojektmanagement']):
+            category = "Integrated Project Management"
         # PMO - Project Management Office
-        if any(word in text for word in ['pmo', 'project management office', 'projektmanagementbüro', 'projektbüro']):
+        elif any(word in text for word in ['pmo', 'project management office', 'projektmanagementbüro', 'projektbüro']):
             category = "PMO"
         # Wettbewerbsbegleitung - Competition Management
         elif any(word in text for word in ['wettbewerbsbegleitung', 'wettbewerb', 'competition management', 'architekturwettbewerb', 'vergabewettbewerb']):
@@ -133,12 +139,6 @@ class TenderScraper:
         # Risikomanagement - Risk Management
         elif any(word in text for word in ['risikomanagement', 'risk management', 'risikoanalyse', 'risikobewertung', 'risikosteuerung']):
             category = "Risikomanagement"
-        # IPA - Integrated Project Alliance
-        elif any(word in text for word in ['ipa', 'integrierte projektabwicklung', 'alliance', 'allianz']):
-            category = "IPA"
-        # IPD - Integrated Project Delivery
-        elif any(word in text for word in ['ipd', 'integrated project delivery']):
-            category = "IPD"
         # Lean Management
         elif any(word in text for word in ['lean', 'lean construction', 'lean management', 'prozessoptimierung']):
             category = "Lean Management"
