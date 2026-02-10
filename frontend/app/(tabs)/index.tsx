@@ -203,54 +203,113 @@ export default function TendersScreen() {
     </TouchableOpacity>
   );
 
-  const renderTenderCard = ({ item }: { item: Tender }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/tender/${item.id}`)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.cardHeader}>
-        <View style={styles.statusBadge}>
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] },
-            ]}
-          />
-          <Text style={styles.statusText}>{item.status}</Text>
-        </View>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
-        </View>
-      </View>
+  const renderTenderCard = ({ item }: { item: Tender }) => {
+    // Determine typology color
+    const getTypologyStyle = () => {
+      const typology = item.building_typology || '';
+      switch (typology.toLowerCase()) {
+        case 'healthcare':
+          return { bg: '#E3F2FD', text: '#1565C0' };
+        case 'infrastructure':
+          return { bg: '#FFF3E0', text: '#E65100' };
+        case 'residential':
+          return { bg: '#E8F5E9', text: '#2E7D32' };
+        case 'commercial':
+          return { bg: '#F3E5F5', text: '#7B1FA2' };
+        case 'industrial':
+          return { bg: '#ECEFF1', text: '#455A64' };
+        case 'data center':
+          return { bg: '#E0F7FA', text: '#00838F' };
+        default:
+          return { bg: '#F5F5F5', text: '#616161' };
+      }
+    };
 
-      <Text style={styles.cardTitle} numberOfLines={2}>
-        {item.title}
-      </Text>
+    const typologyStyle = getTypologyStyle();
+    const isNew = item.status === 'New';
 
-      <View style={styles.cardDetails}>
-        <View style={styles.detailRow}>
-          <Ionicons name="location" size={14} color={colors.textLight} />
-          <Text style={styles.detailText} numberOfLines={1}>{item.location}</Text>
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => router.push(`/tender/${item.id}`)}
+        activeOpacity={0.7}
+      >
+        {/* Header Row: Status + Category */}
+        <View style={styles.cardHeader}>
+          <View style={styles.statusBadge}>
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: isNew ? '#4CAF50' : STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] },
+              ]}
+            />
+            <Text style={[styles.statusText, isNew && { color: '#4CAF50' }]}>{item.status}</Text>
+          </View>
+          
+          <View style={styles.badgesRow}>
+            {item.building_typology && (
+              <View style={[styles.typologyBadge, { backgroundColor: typologyStyle.bg }]}>
+                <Text style={[styles.typologyText, { color: typologyStyle.text }]} numberOfLines={1}>
+                  {item.building_typology}
+                </Text>
+              </View>
+            )}
+            <View style={styles.categoryBadge}>
+              <Text style={styles.categoryText} numberOfLines={1}>{item.category}</Text>
+            </View>
+          </View>
         </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="cash" size={14} color={colors.secondary} />
-          <Text style={[styles.detailText, styles.budgetText]}>{item.budget}</Text>
-        </View>
-        <View style={styles.detailRow}>
-          <Ionicons name="calendar" size={14} color="#E65100" />
-          <Text style={[styles.detailText, styles.deadlineText]}>
-            {format(new Date(item.deadline), 'dd MMM yyyy')}
+
+        {/* Tender Title */}
+        <Text style={styles.cardTitle} numberOfLines={2}>
+          {item.title}
+        </Text>
+
+        {/* Project Type */}
+        {item.project_type && (
+          <Text style={styles.projectType} numberOfLines={1}>
+            {item.project_type}
           </Text>
-        </View>
-      </View>
+        )}
 
-      <View style={styles.cardFooter}>
-        <Text style={styles.platformText} numberOfLines={1}>{item.platform_source}</Text>
-        <Ionicons name="chevron-forward" size={20} color={colors.primary} />
-      </View>
-    </TouchableOpacity>
-  );
+        {/* Details Section */}
+        <View style={styles.cardDetails}>
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Ionicons name="location-outline" size={16} color={colors.textLight} />
+            </View>
+            <Text style={styles.detailText} numberOfLines={1}>{item.location}</Text>
+          </View>
+          
+          {item.budget && (
+            <View style={styles.detailRow}>
+              <View style={styles.detailIconContainer}>
+                <Ionicons name="wallet-outline" size={16} color={colors.secondary} />
+              </View>
+              <Text style={[styles.detailText, styles.budgetText]}>{item.budget}</Text>
+            </View>
+          )}
+          
+          <View style={styles.detailRow}>
+            <View style={styles.detailIconContainer}>
+              <Ionicons name="calendar-outline" size={16} color="#E65100" />
+            </View>
+            <Text style={[styles.detailText, styles.deadlineText]}>
+              {format(new Date(item.deadline), 'dd MMM yyyy')}
+            </Text>
+          </View>
+        </View>
+
+        {/* Footer: Platform Source + Arrow */}
+        <View style={styles.cardFooter}>
+          <Text style={styles.platformText} numberOfLines={1}>{item.platform_source}</Text>
+          <View style={styles.arrowContainer}>
+            <Ionicons name="arrow-forward" size={18} color={colors.primary} />
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   if (loading) {
     return (
