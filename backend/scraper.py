@@ -360,6 +360,12 @@ class TEDEuropaScraper(TenderScraper):
         
         categories = self.categorize_tender(title, description)
         
+        # Generate detail and application URLs
+        notice_id = notice.get('id', '')
+        detail_url = f"{self.BASE_URL}/de/notice/{notice_id}" if notice_id else self.BASE_URL
+        # TED application links typically redirect to eSender
+        application_url = f"{self.BASE_URL}/de/notice/{notice_id}/submit" if notice_id else detail_url
+        
         return {
             "title": title,
             "description": description or f"EU Ausschreibung: {title}",
@@ -374,7 +380,8 @@ class TEDEuropaScraper(TenderScraper):
             "category": categories["category"],
             "building_typology": categories["building_typology"],
             "platform_source": "TED Europa",
-            "platform_url": f"{self.BASE_URL}/de/notice/{notice.get('id', '')}",
+            "platform_url": detail_url,
+            "application_url": application_url,
             "status": "New",
             "is_applied": False,
             "application_status": "Not Applied",
