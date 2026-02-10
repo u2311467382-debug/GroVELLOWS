@@ -213,6 +213,7 @@ class Tender(BaseModel):
     building_typology: Optional[str] = None
     platform_source: str = "Unknown"
     platform_url: Optional[str] = None
+    application_url: Optional[str] = None  # Direct link to apply for the tender
     status: str = TenderStatus.NEW
     is_applied: bool = False
     applied_date: Optional[datetime] = None
