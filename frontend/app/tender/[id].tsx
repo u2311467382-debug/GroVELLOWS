@@ -452,10 +452,22 @@ export default function TenderDetailScreen() {
             </View>
             <View style={styles.linkContent}>
               <Text style={[styles.linkLabel, styles.applicationLabel]}>Apply for Tender</Text>
-              <Text style={styles.linkSubtext}>Direct application link</Text>
+              <Text style={styles.linkSubtext}>
+                {tender.application_url ? 'Direct application link' : 'Opens platform page'}
+              </Text>
             </View>
             <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
           </TouchableOpacity>
+
+          {/* Warning if no dedicated application URL */}
+          {!tender.application_url && (
+            <View style={styles.warningBanner}>
+              <Ionicons name="information-circle" size={18} color="#F57C00" />
+              <Text style={styles.warningText}>
+                No direct application link available. You may need to search for this tender on the portal.
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.section}>
