@@ -50,16 +50,29 @@ const APPLICATION_STATUS_COLORS = {
 };
 
 const CATEGORIES = [
-  'All', 'IPA', 'IPD', 'Integrated Project Management', 'Project Management',
-  'Risk Management', 'Lean Management', 'Procurement Management',
-  'Organization Alignment Workshops', 'Construction Supervision',
-  'Change Order Management', 'Cost Management', 'Tendering Process',
-  'Project Completion', 'Handover Documentation', 'General'
+  'All',
+  'PMO',
+  'Wettbewerbsbegleitung',
+  'Finanzcontrolling',
+  'Agiles Projektmanagement',
+  'Projekt Coaching',
+  'Nutzermanagement',
+  'Krisenmanagement',
+  'Vertragsmanagement',
+  'Risikomanagement',
+  'IPA',
+  'IPD',
+  'Lean Management',
+  'Bauüberwachung',
+  'Kostenmanagement',
+  'Projektmanagement',
+  'Beschaffungsmanagement',
+  'General'
 ];
 
 const BUILDING_TYPOLOGIES = [
-  'All', 'Residential', 'Commercial', 'Mixed-Use', 'Healthcare', 
-  'Data Center', 'Infrastructure', 'Industrial', 'Bauprojekt'
+  'All', 'Healthcare', 'Data Center', 'Residential', 'Commercial', 
+  'Mixed-Use', 'Industrial', 'Infrastructure', 'Education', 'Sports', 'Hospitality'
 ];
 
 const STATUSES = ['All', 'New', 'In Progress', 'Closed'];
