@@ -92,43 +92,90 @@ class TenderScraper:
         """Categorize tender based on content"""
         text = f"{title} {description}".lower()
         
+        # Check if this is a relevant construction/project management tender
+        construction_keywords = [
+            'bau', 'construction', 'neubau', 'umbau', 'sanierung', 'renovierung',
+            'architektur', 'architect', 'planung', 'planning', 'ingenieur', 'engineer',
+            'hochbau', 'tiefbau', 'gebäude', 'building', 'projekt', 'project',
+            'immobilie', 'real estate', 'facility', 'facilities'
+        ]
+        
+        is_relevant = any(kw in text for kw in construction_keywords)
+        
         # Category detection
         category = "General"
-        if any(word in text for word in ['ipa', 'integrierte projektabwicklung']):
+        if any(word in text for word in ['ipa', 'integrierte projektabwicklung', 'alliance']):
             category = "IPA"
         elif any(word in text for word in ['ipd', 'integrated project delivery']):
             category = "IPD"
-        elif any(word in text for word in ['risiko', 'risk management']):
+        elif any(word in text for word in ['risiko', 'risk management', 'risikoanalyse', 'risikobewertung']):
             category = "Risk Management"
-        elif any(word in text for word in ['lean', 'optimierung']):
+        elif any(word in text for word in ['lean', 'optimierung', 'process improvement']):
             category = "Lean Management"
-        elif any(word in text for word in ['beschaffung', 'procurement', 'einkauf']):
+        elif any(word in text for word in ['beschaffung', 'procurement', 'einkauf', 'ausschreibung', 'vergabe']):
             category = "Procurement Management"
-        elif any(word in text for word in ['bauüberwachung', 'construction supervision', 'bauleitung']):
+        elif any(word in text for word in ['bauüberwachung', 'construction supervision', 'bauleitung', 'bauaufsicht', 'baubegleitung']):
             category = "Construction Supervision"
-        elif any(word in text for word in ['kosten', 'cost management', 'controlling']):
+        elif any(word in text for word in ['kosten', 'cost management', 'controlling', 'budget', 'kalkulation']):
             category = "Cost Management"
-        elif any(word in text for word in ['projektmanagement', 'project management']):
+        elif any(word in text for word in ['projektmanagement', 'project management', 'projektsteuerung', 'projektleitung']):
             category = "Project Management"
+        elif any(word in text for word in ['beratung', 'consulting', 'gutachten']):
+            category = "Consulting"
         
-        # Building typology detection
+        # Building typology detection - more keywords
         building_typology = None
-        if any(word in text for word in ['krankenhaus', 'klinik', 'hospital', 'medizin', 'gesundheit']):
+        if any(word in text for word in ['krankenhaus', 'klinik', 'hospital', 'medizin', 'gesundheit', 'pflege', 'praxis', 'ambulanz']):
             building_typology = "Healthcare"
-        elif any(word in text for word in ['rechenzentrum', 'data center', 'datacenter']):
+        elif any(word in text for word in ['rechenzentrum', 'data center', 'datacenter', 'serverraum', 'it-infrastruktur']):
             building_typology = "Data Center"
-        elif any(word in text for word in ['wohn', 'residential', 'apartment', 'wohnung']):
+        elif any(word in text for word in ['wohn', 'residential', 'apartment', 'wohnung', 'mehrfamilienhaus', 'einfamilienhaus', 'siedlung']):
             building_typology = "Residential"
-        elif any(word in text for word in ['büro', 'office', 'gewerbe', 'commercial']):
+        elif any(word in text for word in ['büro', 'office', 'gewerbe', 'commercial', 'geschäftshaus', 'verwaltung']):
             building_typology = "Commercial"
-        elif any(word in text for word in ['mixed', 'gemischt']):
+        elif any(word in text for word in ['mixed', 'gemischt', 'quartier']):
             building_typology = "Mixed-Use"
-        elif any(word in text for word in ['industrie', 'industrial', 'fabrik', 'werk']):
+        elif any(word in text for word in ['industrie', 'industrial', 'fabrik', 'werk', 'produktion', 'lager', 'logistik']):
             building_typology = "Industrial"
-        elif any(word in text for word in ['infrastruktur', 'brücke', 'tunnel', 'straße', 'autobahn']):
+        elif any(word in text for word in ['infrastruktur', 'brücke', 'tunnel', 'straße', 'autobahn', 'schiene', 'bahn', 'verkehr']):
             building_typology = "Infrastructure"
+        elif any(word in text for word in ['schule', 'universität', 'bildung', 'education', 'hochschule', 'gymnasium', 'campus']):
+            building_typology = "Education"
+        elif any(word in text for word in ['sport', 'stadion', 'arena', 'schwimmbad', 'turnhalle']):
+            building_typology = "Sports"
+        elif any(word in text for word in ['hotel', 'gastro', 'restaurant', 'hospitality']):
+            building_typology = "Hospitality"
         
-        return {"category": category, "building_typology": building_typology}
+        return {"category": category, "building_typology": building_typology, "is_relevant": is_relevant}
+    
+    def generate_application_url(self, title: str, platform_source: str, platform_url: str) -> str:
+        """Generate a search URL to find the specific tender on the platform"""
+        from urllib.parse import quote_plus
+        
+        # Clean and encode the title for search
+        search_title = title[:80]  # Limit length
+        encoded_title = quote_plus(search_title)
+        
+        # Platform-specific search URLs
+        if 'Bayern' in platform_source:
+            return f"https://www.auftraege.bayern.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'NRW' in platform_source:
+            return f"https://www.evergabe.nrw.de/VMPSatellite/public/search?q={encoded_title}"
+        elif 'Berlin' in platform_source:
+            return f"https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/?q={encoded_title}"
+        elif 'Hamburg' in platform_source:
+            return f"https://www.hamburg.de/fb/hamburg/search/?searchterm={encoded_title}"
+        elif 'Sachsen' in platform_source:
+            return f"https://www.sachsen-vergabe.de/vergabe/bekanntmachung/?search={encoded_title}"
+        elif 'Baden-Württemberg' in platform_source or 'bw' in platform_source.lower():
+            return f"https://vergabe.landbw.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'TED' in platform_source or 'Europa' in platform_source:
+            return f"https://ted.europa.eu/de/search/result?q={encoded_title}"
+        elif 'Bund' in platform_source:
+            return f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?searchText={encoded_title}"
+        else:
+            # Fallback to platform URL
+            return platform_url
 
 
 class BundDeScraper(TenderScraper):
