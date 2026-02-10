@@ -36,6 +36,7 @@ interface Tender {
   building_typology?: string;
   platform_source: string;
   platform_url: string;
+  application_url?: string;
   status: string;
   is_applied?: boolean;
   application_status?: string;
