@@ -2523,6 +2523,79 @@ async def get_unread_count(current_user: dict = Depends(get_current_user)):
     })
     return {"unread_count": count}
 
+# ============ PUSH NOTIFICATIONS ============
+
+class PushTokenRequest(BaseModel):
+    push_token: str
+    device_platform: str = "ios"
+
+@api_router.post("/notifications/register-token")
+async def register_push_token(
+    request: PushTokenRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Register Expo push token for the current user"""
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {
+            "push_token": request.push_token,
+            "device_platform": request.device_platform,
+            "push_token_updated": datetime.utcnow()
+        }}
+    )
+    return {"message": "Push token registered successfully"}
+
+async def send_push_notification(push_token: str, title: str, body: str, data: dict = None):
+    """Send push notification via Expo's push service"""
+    import aiohttp
+    
+    message = {
+        "to": push_token,
+        "sound": "default",
+        "title": title,
+        "body": body,
+        "data": data or {},
+        "badge": 1,
+        "channelId": "tenders",
+    }
+    
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(
+                "https://exp.host/--/api/v2/push/send",
+                json=message,
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                }
+            ) as resp:
+                if resp.status == 200:
+                    logger.info(f"Push notification sent: {title}")
+                else:
+                    logger.error(f"Failed to send push notification: {await resp.text()}")
+    except Exception as e:
+        logger.error(f"Error sending push notification: {e}")
+
+async def notify_users_new_tender(tender: dict):
+    """Send push notifications to all users about a new tender"""
+    # Get all users with push tokens who have new_tenders notifications enabled
+    users = await db.users.find({
+        "push_token": {"$exists": True, "$ne": None},
+        "notification_preferences.new_tenders": True
+    }).to_list(None)
+    
+    for user in users:
+        await send_push_notification(
+            push_token=user["push_token"],
+            title=f"🆕 New Tender: {tender.get('category', 'General')}",
+            body=tender.get('title', 'New tender available')[:100],
+            data={
+                "tenderId": str(tender.get("_id", "")),
+                "category": tender.get("category", ""),
+                "platform": tender.get("platform_source", ""),
+            }
+        )
+
 # ============ SCRAPE SETTINGS ============
 
 @api_router.get("/scrape/settings")
