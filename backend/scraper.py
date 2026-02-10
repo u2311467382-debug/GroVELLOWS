@@ -231,6 +231,9 @@ class TenderScraper:
             return f"https://www.evergabe.de/unterlagen?searchText={encoded_title}"
         elif 'Öffentliche Vergabe' in platform_source:
             return f"https://www.oeffentlichevergabe.de/search?q={encoded_title}"
+        # Switzerland
+        elif 'SIMAP' in platform_source or 'simap.ch' in platform_source.lower():
+            return f"https://www.simap.ch/shabforms/COMMON/search/searchresultListAction.do?searchString={encoded_title}"
         # Hospital platforms
         elif 'Charité' in platform_source:
             return f"https://vergabeplattform.charite.de/search?q={encoded_title}"
