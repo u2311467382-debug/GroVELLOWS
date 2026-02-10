@@ -539,6 +539,28 @@ class StateTenderScraper(TenderScraper):
             if parsed:
                 deadline = parsed
         
+        # Extract detail link
+        detail_link = portal["url"]
+        link_elem = item.select_one('a[href]')
+        if link_elem:
+            href = link_elem.get('href', '')
+            if href.startswith('/'):
+                detail_link = f"{portal['url']}{href}"
+            elif href.startswith('http'):
+                detail_link = href
+        
+        # Application link - use application_base or fallback to detail link
+        application_link = portal.get("application_base", detail_link)
+        
+        # Try to find specific apply/submit link
+        apply_elem = item.select_one('a[href*="apply"], a[href*="bewerben"], a[href*="teilnahme"], .apply-btn')
+        if apply_elem:
+            apply_href = apply_elem.get('href', '')
+            if apply_href.startswith('/'):
+                application_link = f"{portal['url']}{apply_href}"
+            elif apply_href.startswith('http'):
+                application_link = apply_href
+        
         categories = self.categorize_tender(title, description)
         
         return {
@@ -555,7 +577,8 @@ class StateTenderScraper(TenderScraper):
             "category": categories["category"],
             "building_typology": categories["building_typology"],
             "platform_source": portal["name"],
-            "platform_url": portal["url"],
+            "platform_url": detail_link,
+            "application_url": application_link,
             "status": "New",
             "is_applied": False,
             "application_status": "Not Applied",
