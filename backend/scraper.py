@@ -164,7 +164,7 @@ class TenderScraper:
         elif 'Berlin' in platform_source:
             return f"https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/?q={encoded_title}"
         elif 'Hamburg' in platform_source:
-            return f"https://www.hamburg.de/fb/hamburg/search/?searchterm={encoded_title}"
+            return f"https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/subproject/search?searchText={encoded_title}"
         elif 'Sachsen' in platform_source:
             return f"https://www.sachsen-vergabe.de/vergabe/bekanntmachung/?search={encoded_title}"
         elif 'Baden-Württemberg' in platform_source or 'bw' in platform_source.lower():
