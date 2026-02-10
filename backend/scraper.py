@@ -702,6 +702,16 @@ class StateTenderScraper(TenderScraper):
         }
     }
     
+    # Switzerland platform
+    SWISS_PORTALS = {
+        "simap": {
+            "name": "SIMAP.ch",
+            "url": "https://www.simap.ch",
+            "region": "Schweiz",
+            "application_base": "https://www.simap.ch/shabforms/COMMON/search/searchresultListAction.do"
+        }
+    }
+    
     async def scrape(self, state: str = None, max_results: int = 20) -> List[Dict]:
         """Scrape tenders from state portals"""
         tenders = []
