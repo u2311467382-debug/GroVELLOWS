@@ -112,14 +112,28 @@ export default function TendersScreen() {
   const filterAndSortTenders = () => {
     let filtered = [...tenders];
 
-    // Search filter
+    // Deep Search filter - searches across all relevant fields
     if (searchQuery) {
-      filtered = filtered.filter(
-        (tender) =>
-          tender.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tender.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tender.location.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter((tender) => {
+        // Search in title, description, location
+        if (tender.title.toLowerCase().includes(query)) return true;
+        if (tender.description.toLowerCase().includes(query)) return true;
+        if (tender.location.toLowerCase().includes(query)) return true;
+        
+        // Deep search: project_type, category, building_typology
+        if (tender.project_type?.toLowerCase().includes(query)) return true;
+        if (tender.category?.toLowerCase().includes(query)) return true;
+        if (tender.building_typology?.toLowerCase().includes(query)) return true;
+        
+        // Search in platform source
+        if (tender.platform_source?.toLowerCase().includes(query)) return true;
+        
+        // Search in budget for specific amounts
+        if (tender.budget?.toLowerCase().includes(query)) return true;
+        
+        return false;
+      });
     }
 
     // Category filter
