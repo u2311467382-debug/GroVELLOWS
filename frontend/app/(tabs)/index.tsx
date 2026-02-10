@@ -51,6 +51,8 @@ const APPLICATION_STATUS_COLORS = {
 
 const CATEGORIES = [
   'All',
+  'Integrierte Projektabwicklung',
+  'Integrated Project Management',
   'PMO',
   'Wettbewerbsbegleitung',
   'Finanzcontrolling',
@@ -60,8 +62,6 @@ const CATEGORIES = [
   'Krisenmanagement',
   'Vertragsmanagement',
   'Risikomanagement',
-  'IPA',
-  'IPD',
   'Lean Management',
   'Bauüberwachung',
   'Kostenmanagement',
