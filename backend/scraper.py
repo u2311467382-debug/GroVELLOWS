@@ -509,41 +509,160 @@ class StateTenderScraper(TenderScraper):
     """Generic scraper for German state tender portals"""
     
     PORTALS = {
+        # Bavaria
         "bayern": {
             "name": "Vergabe Bayern",
             "url": "https://www.auftraege.bayern.de",
             "region": "Bayern",
             "application_base": "https://www.auftraege.bayern.de/NetServer/PublicationControllerServlet"
         },
+        # North Rhine-Westphalia
         "nrw": {
             "name": "e-Vergabe NRW", 
             "url": "https://www.evergabe.nrw.de",
             "region": "Nordrhein-Westfalen",
             "application_base": "https://www.evergabe.nrw.de/VMPSatellite/public/bekanntmachung"
         },
+        # Berlin
         "berlin": {
             "name": "Vergabeplattform Berlin",
             "url": "https://www.berlin.de/vergabeplattform",
             "region": "Berlin",
             "application_base": "https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/"
         },
+        # Hamburg
         "hamburg": {
             "name": "Hamburg Vergabe",
             "url": "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/tabs/home",
             "region": "Hamburg",
             "application_base": "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/subproject/search"
         },
+        # Saxony
         "sachsen": {
             "name": "Sachsen Vergabe",
             "url": "https://www.sachsen-vergabe.de",
             "region": "Sachsen",
             "application_base": "https://www.sachsen-vergabe.de/vergabe/bekanntmachung/"
         },
+        # Baden-Württemberg
         "bw": {
             "name": "Vergabe Baden-Württemberg",
             "url": "https://vergabe.landbw.de",
             "region": "Baden-Württemberg",
             "application_base": "https://vergabe.landbw.de/NetServer/PublicationControllerServlet"
+        },
+        # Hesse
+        "hessen": {
+            "name": "HAD Hessen",
+            "url": "https://www.had.de",
+            "region": "Hessen",
+            "application_base": "https://www.had.de/NetServer/PublicationSearchControllerServlet"
+        },
+        # Lower Saxony
+        "niedersachsen": {
+            "name": "Vergabe Niedersachsen",
+            "url": "https://vergabe.niedersachsen.de",
+            "region": "Niedersachsen",
+            "application_base": "https://vergabe.niedersachsen.de/NetServer/PublicationSearchControllerServlet"
+        },
+        # Bremen
+        "bremen": {
+            "name": "Vergabe Bremen",
+            "url": "https://www.vergabe.bremen.de",
+            "region": "Bremen",
+            "application_base": "https://www.vergabe.bremen.de/NetServer/PublicationSearchControllerServlet"
+        },
+        # Brandenburg
+        "brandenburg": {
+            "name": "Vergabemarktplatz Brandenburg",
+            "url": "https://vergabemarktplatz.brandenburg.de",
+            "region": "Brandenburg",
+            "application_base": "https://vergabemarktplatz.brandenburg.de/VMPSatellite/public/search"
+        },
+        # Rhineland-Palatinate
+        "rlp": {
+            "name": "Vergabe Rheinland-Pfalz",
+            "url": "https://www.vergabe.rlp.de",
+            "region": "Rheinland-Pfalz",
+            "application_base": "https://www.vergabe.rlp.de/VMPSatellite/public/search"
+        },
+        # Saarland
+        "saarland": {
+            "name": "Vergabe Saarland",
+            "url": "https://vergabe.saarland",
+            "region": "Saarland",
+            "application_base": "https://vergabe.saarland/NetServer/PublicationSearchControllerServlet"
+        },
+        # Saxony-Anhalt
+        "sachsen_anhalt": {
+            "name": "eVergabe Sachsen-Anhalt",
+            "url": "https://www.evergabe.sachsen-anhalt.de",
+            "region": "Sachsen-Anhalt",
+            "application_base": "https://www.evergabe.sachsen-anhalt.de/NetServer/PublicationSearchControllerServlet"
+        },
+        # Schleswig-Holstein
+        "sh": {
+            "name": "e-Vergabe Schleswig-Holstein",
+            "url": "https://www.e-vergabe-sh.de",
+            "region": "Schleswig-Holstein",
+            "application_base": "https://www.e-vergabe-sh.de/NetServer/PublicationSearchControllerServlet"
+        },
+        # Thuringia
+        "thueringen": {
+            "name": "Vergabe Thüringen",
+            "url": "https://www.portal.thueringen.de",
+            "region": "Thüringen",
+            "application_base": "https://www.portal.thueringen.de/vergabe"
+        }
+    }
+    
+    # Additional national platforms
+    NATIONAL_PORTALS = {
+        "dtvp": {
+            "name": "Deutsches Vergabeportal (DTVP)",
+            "url": "https://www.dtvp.de",
+            "region": "Deutschland",
+            "application_base": "https://www.dtvp.de/Center"
+        },
+        "evergabe": {
+            "name": "e-Vergabe",
+            "url": "https://www.evergabe.de",
+            "region": "Deutschland",
+            "application_base": "https://www.evergabe.de/unterlagen"
+        },
+        "oeffentliche": {
+            "name": "Öffentliche Vergabe",
+            "url": "https://www.oeffentlichevergabe.de",
+            "region": "Deutschland",
+            "application_base": "https://www.oeffentlichevergabe.de/search"
+        },
+        "ausschreibungen_de": {
+            "name": "Ausschreibungen Deutschland",
+            "url": "https://ausschreibungen-deutschland.de",
+            "region": "Deutschland",
+            "application_base": "https://ausschreibungen-deutschland.de/search"
+        }
+    }
+    
+    # Hospital/Klinikum platforms
+    HOSPITAL_PORTALS = {
+        "charite": {
+            "name": "Charité Vergabeplattform",
+            "url": "https://vergabeplattform.charite.de",
+            "region": "Berlin",
+            "application_base": "https://vergabeplattform.charite.de"
+        },
+        "vivantes": {
+            "name": "Vivantes",
+            "url": "https://www.vivantes.de",
+            "region": "Berlin",
+            "application_base": "https://www.vivantes.de/unternehmen/ausschreibungen"
+        },
+        "uke": {
+            "name": "UKE Hamburg (KFE)",
+            "url": "https://www.uke.de/organisationsstruktur/tochtergesellschaften/kfe/ausschreibungen",
+            "region": "Hamburg",
+            "application_base": "https://www.uke.de/organisationsstruktur/tochtergesellschaften/kfe/ausschreibungen"
         }
     }
     
