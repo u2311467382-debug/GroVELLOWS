@@ -89,7 +89,7 @@ class TenderScraper:
         return budget_str if budget_str else None
     
     def categorize_tender(self, title: str, description: str) -> Dict[str, str]:
-        """Categorize tender based on content"""
+        """Categorize tender based on content - focused on construction project management"""
         text = f"{title} {description}".lower()
         
         # Check if this is a relevant construction/project management tender
@@ -97,31 +97,63 @@ class TenderScraper:
             'bau', 'construction', 'neubau', 'umbau', 'sanierung', 'renovierung',
             'architektur', 'architect', 'planung', 'planning', 'ingenieur', 'engineer',
             'hochbau', 'tiefbau', 'gebäude', 'building', 'projekt', 'project',
-            'immobilie', 'real estate', 'facility', 'facilities'
+            'immobilie', 'real estate', 'facility', 'facilities', 'infrastruktur',
+            'wettbewerb', 'competition', 'controlling', 'management'
         ]
         
         is_relevant = any(kw in text for kw in construction_keywords)
         
-        # Category detection
+        # Category detection - focused on construction project management services
         category = "General"
-        if any(word in text for word in ['ipa', 'integrierte projektabwicklung', 'alliance']):
+        
+        # PMO - Project Management Office
+        if any(word in text for word in ['pmo', 'project management office', 'projektmanagementbüro', 'projektbüro']):
+            category = "PMO"
+        # Wettbewerbsbegleitung - Competition Management
+        elif any(word in text for word in ['wettbewerbsbegleitung', 'wettbewerb', 'competition management', 'architekturwettbewerb', 'vergabewettbewerb']):
+            category = "Wettbewerbsbegleitung"
+        # Finanzcontrolling - Financial Controlling
+        elif any(word in text for word in ['finanzcontrolling', 'financial controlling', 'finanzsteuerung', 'budgetcontrolling', 'kostencontrolling']):
+            category = "Finanzcontrolling"
+        # Agiles Projektmanagement - Agile Project Management
+        elif any(word in text for word in ['agil', 'agile', 'scrum', 'kanban', 'agiles projektmanagement', 'agile project']):
+            category = "Agiles Projektmanagement"
+        # Projekt Coaching - Project Coaching
+        elif any(word in text for word in ['projekt coaching', 'project coaching', 'projektcoaching', 'bauherrenberatung', 'projektberatung']):
+            category = "Projekt Coaching"
+        # Nutzermanagement - User Management
+        elif any(word in text for word in ['nutzermanagement', 'user management', 'nutzerbetreuung', 'nutzerkoordination', 'stakeholder management']):
+            category = "Nutzermanagement"
+        # Krisenmanagement - Crisis Management
+        elif any(word in text for word in ['krisenmanagement', 'crisis management', 'konfliktmanagement', 'claim management', 'claimmanagement']):
+            category = "Krisenmanagement"
+        # Vertragsmanagement - Contract Management
+        elif any(word in text for word in ['vertragsmanagement', 'contract management', 'vertragssteuerung', 'nachtragsmanagement', 'vertragscontrolling']):
+            category = "Vertragsmanagement"
+        # Risikomanagement - Risk Management
+        elif any(word in text for word in ['risikomanagement', 'risk management', 'risikoanalyse', 'risikobewertung', 'risikosteuerung']):
+            category = "Risikomanagement"
+        # IPA - Integrated Project Alliance
+        elif any(word in text for word in ['ipa', 'integrierte projektabwicklung', 'alliance', 'allianz']):
             category = "IPA"
+        # IPD - Integrated Project Delivery
         elif any(word in text for word in ['ipd', 'integrated project delivery']):
             category = "IPD"
-        elif any(word in text for word in ['risiko', 'risk management', 'risikoanalyse', 'risikobewertung']):
-            category = "Risk Management"
-        elif any(word in text for word in ['lean', 'optimierung', 'process improvement']):
+        # Lean Management
+        elif any(word in text for word in ['lean', 'lean construction', 'lean management', 'prozessoptimierung']):
             category = "Lean Management"
-        elif any(word in text for word in ['beschaffung', 'procurement', 'einkauf', 'ausschreibung', 'vergabe']):
-            category = "Procurement Management"
-        elif any(word in text for word in ['bauüberwachung', 'construction supervision', 'bauleitung', 'bauaufsicht', 'baubegleitung']):
-            category = "Construction Supervision"
-        elif any(word in text for word in ['kosten', 'cost management', 'controlling', 'budget', 'kalkulation']):
-            category = "Cost Management"
+        # Construction Supervision
+        elif any(word in text for word in ['bauüberwachung', 'construction supervision', 'bauleitung', 'bauaufsicht', 'baubegleitung', 'objektüberwachung']):
+            category = "Bauüberwachung"
+        # Cost Management
+        elif any(word in text for word in ['kostenmanagement', 'cost management', 'kostensteuerung', 'kostenkontrolle', 'kalkulation']):
+            category = "Kostenmanagement"
+        # Project Management (general)
         elif any(word in text for word in ['projektmanagement', 'project management', 'projektsteuerung', 'projektleitung']):
-            category = "Project Management"
-        elif any(word in text for word in ['beratung', 'consulting', 'gutachten']):
-            category = "Consulting"
+            category = "Projektmanagement"
+        # Procurement
+        elif any(word in text for word in ['beschaffung', 'procurement', 'einkauf', 'vergabemanagement']):
+            category = "Beschaffungsmanagement"
         
         # Building typology detection - more keywords
         building_typology = None
