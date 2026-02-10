@@ -204,23 +204,23 @@ class Tender(BaseModel):
     budget: Optional[str] = None
     deadline: datetime
     location: str
-    project_type: str
-    contracting_authority: str
+    project_type: Optional[str] = None
+    contracting_authority: Optional[str] = None
     participants: List[str] = []
     contact_details: dict = {}
-    tender_date: datetime
-    category: str
-    building_typology: Optional[str] = None  # NEW
-    platform_source: str
-    platform_url: str
+    tender_date: Optional[datetime] = None
+    category: str = "General"
+    building_typology: Optional[str] = None
+    platform_source: str = "Unknown"
+    platform_url: Optional[str] = None
     status: str = TenderStatus.NEW
-    is_applied: bool = False  # NEW
-    applied_date: Optional[datetime] = None  # NEW
-    application_status: str = "Not Applied"  # NEW: Not Applied, Awaiting Results, Won, Lost
-    result_date: Optional[datetime] = None  # NEW
-    linkedin_connections: List[dict] = []  # NEW
-    duplicate_sources: List[str] = []  # NEW: Other platforms with same tender
-    sharepoint_folder: Optional[str] = None  # NEW
+    is_applied: bool = False
+    applied_date: Optional[datetime] = None
+    application_status: str = "Not Applied"
+    result_date: Optional[datetime] = None
+    linkedin_connections: List[dict] = []
+    duplicate_sources: List[str] = []
+    sharepoint_folder: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
