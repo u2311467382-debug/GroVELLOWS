@@ -497,9 +497,9 @@ class StateTenderScraper(TenderScraper):
         },
         "hamburg": {
             "name": "Hamburg Vergabe",
-            "url": "https://www.hamburg.de/wirtschaft/ausschreibungen-wirtschaft",
+            "url": "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/tabs/home",
             "region": "Hamburg",
-            "application_base": "https://www.hamburg.de/vergabe/"
+            "application_base": "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/subproject/search"
         },
         "sachsen": {
             "name": "Sachsen Vergabe",
