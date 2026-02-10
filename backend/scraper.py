@@ -207,15 +207,29 @@ class BundDeScraper(TenderScraper):
         if location_elem:
             location = self.clean_text(location_elem.get_text()) or location
         
-        # Get link
-        link = ""
+        # Get links - both detail and application
+        detail_link = ""
+        application_link = ""
         link_elem = item.select_one('a[href]')
         if link_elem:
             href = link_elem.get('href', '')
             if href.startswith('/'):
-                link = f"{self.BASE_URL}{href}"
+                detail_link = f"{self.BASE_URL}{href}"
             elif href.startswith('http'):
-                link = href
+                detail_link = href
+        
+        # Look for specific application link
+        apply_elem = item.select_one('a[href*="apply"], a[href*="bewerben"], a[href*="teilnahme"], .apply-link')
+        if apply_elem:
+            apply_href = apply_elem.get('href', '')
+            if apply_href.startswith('/'):
+                application_link = f"{self.BASE_URL}{apply_href}"
+            elif apply_href.startswith('http'):
+                application_link = apply_href
+        
+        # If no specific application link, use detail link as fallback
+        if not application_link:
+            application_link = detail_link
         
         # Categorize
         categories = self.categorize_tender(title, description)
@@ -234,7 +248,8 @@ class BundDeScraper(TenderScraper):
             "category": categories["category"],
             "building_typology": categories["building_typology"],
             "platform_source": "Bund.de",
-            "platform_url": link or self.BASE_URL,
+            "platform_url": detail_link or self.BASE_URL,
+            "application_url": application_link,
             "status": "New",
             "is_applied": False,
             "application_status": "Not Applied",
