@@ -789,6 +789,22 @@ const styles = StyleSheet.create({
     color: colors.textLight,
     marginTop: 2,
   },
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#FFF3E0',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#F57C00',
+    gap: 8,
+  },
+  warningText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#E65100',
+    lineHeight: 18,
+  },
   statusButtons: {
     flexDirection: 'row',
     gap: 8,
