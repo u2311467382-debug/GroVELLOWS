@@ -420,15 +420,41 @@ export default function TenderDetailScreen() {
           </View>
         )}
 
+        {/* Links Section - Platform & Application */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Platform</Text>
+          <Text style={styles.sectionTitle}>Links</Text>
+          
+          {/* View Tender on Platform */}
           <TouchableOpacity
-            style={styles.platformButton}
+            style={styles.linkButton}
             onPress={openPlatformUrl}
           >
-            <Ionicons name="globe-outline" size={20} color={colors.primary} />
-            <Text style={styles.platformButtonText}>{tender.platform_source}</Text>
-            <Ionicons name="open-outline" size={16} color={colors.primary} />
+            <View style={styles.linkIconContainer}>
+              <Ionicons name="globe-outline" size={20} color={colors.primary} />
+            </View>
+            <View style={styles.linkContent}>
+              <Text style={styles.linkLabel}>View on Portal</Text>
+              <Text style={styles.linkSource} numberOfLines={1}>{tender.platform_source}</Text>
+            </View>
+            <Ionicons name="open-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+
+          {/* Direct Application Link */}
+          <TouchableOpacity
+            style={[styles.linkButton, styles.applicationLinkButton]}
+            onPress={() => {
+              const appUrl = tender.application_url || tender.platform_url;
+              if (appUrl) Linking.openURL(appUrl);
+            }}
+          >
+            <View style={[styles.linkIconContainer, styles.applicationIconContainer]}>
+              <Ionicons name="document-text-outline" size={20} color={colors.textWhite} />
+            </View>
+            <View style={styles.linkContent}>
+              <Text style={[styles.linkLabel, styles.applicationLabel]}>Apply for Tender</Text>
+              <Text style={styles.linkSubtext}>Direct application link</Text>
+            </View>
+            <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
           </TouchableOpacity>
         </View>
 
