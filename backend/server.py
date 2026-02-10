@@ -2568,6 +2568,9 @@ async def update_scrape_settings(
 # Include router
 app.include_router(api_router)
 
+# Add Security Middleware
+app.add_middleware(SecurityMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
@@ -2575,6 +2578,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security endpoint for data breach risks
+@app.get("/api/security/data-breach-risks")
+async def get_breach_risks():
+    """Get list of potential data breach risks and mitigation measures"""
+    return {"risks": get_data_breach_risks()}
 
 # ============ BACKGROUND TASKS ============
 
