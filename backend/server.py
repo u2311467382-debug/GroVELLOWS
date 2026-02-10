@@ -26,6 +26,9 @@ from bson import json_util
 from fastapi.responses import JSONResponse
 from fastapi.encoders import ENCODERS_BY_TYPE
 
+# Import security middleware
+from security import SecurityMiddleware, sanitize_input, sanitize_dict, get_data_breach_risks
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
