@@ -197,7 +197,7 @@ class TenderScraper:
             return f"https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/?q={encoded_title}"
         elif 'Hamburg' in platform_source:
             return f"https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/subproject/search?searchText={encoded_title}"
-        elif 'Sachsen' in platform_source:
+        elif 'Sachsen' in platform_source and 'Anhalt' not in platform_source:
             return f"https://www.sachsen-vergabe.de/vergabe/bekanntmachung/?search={encoded_title}"
         elif 'Baden-Württemberg' in platform_source or 'bw' in platform_source.lower():
             return f"https://vergabe.landbw.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
@@ -205,6 +205,39 @@ class TenderScraper:
             return f"https://ted.europa.eu/de/search/result?q={encoded_title}"
         elif 'Bund' in platform_source:
             return f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?searchText={encoded_title}"
+        # New platforms from PDF
+        elif 'Hessen' in platform_source or 'HAD' in platform_source:
+            return f"https://www.had.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Niedersachsen' in platform_source:
+            return f"https://vergabe.niedersachsen.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Bremen' in platform_source:
+            return f"https://www.vergabe.bremen.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Brandenburg' in platform_source:
+            return f"https://vergabemarktplatz.brandenburg.de/VMPSatellite/public/search?q={encoded_title}"
+        elif 'Rheinland-Pfalz' in platform_source or 'RLP' in platform_source:
+            return f"https://www.vergabe.rlp.de/VMPSatellite/public/search?q={encoded_title}"
+        elif 'Saarland' in platform_source:
+            return f"https://vergabe.saarland/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Sachsen-Anhalt' in platform_source:
+            return f"https://www.evergabe.sachsen-anhalt.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Schleswig-Holstein' in platform_source:
+            return f"https://www.e-vergabe-sh.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}"
+        elif 'Thüringen' in platform_source:
+            return f"https://www.portal.thueringen.de/vergabe?search={encoded_title}"
+        # National platforms
+        elif 'DTVP' in platform_source:
+            return f"https://www.dtvp.de/Center/common/project/search.do?search={encoded_title}"
+        elif 'eVergabe.de' in platform_source or 'Evergabe.de' in platform_source:
+            return f"https://www.evergabe.de/unterlagen?searchText={encoded_title}"
+        elif 'Öffentliche Vergabe' in platform_source:
+            return f"https://www.oeffentlichevergabe.de/search?q={encoded_title}"
+        # Hospital platforms
+        elif 'Charité' in platform_source:
+            return f"https://vergabeplattform.charite.de/search?q={encoded_title}"
+        elif 'Vivantes' in platform_source:
+            return f"https://www.vivantes.de/unternehmen/ausschreibungen?search={encoded_title}"
+        elif 'UKE' in platform_source or 'KFE' in platform_source:
+            return f"https://www.uke.de/organisationsstruktur/tochtergesellschaften/kfe/ausschreibungen?search={encoded_title}"
         else:
             # Fallback to platform URL
             return platform_url
