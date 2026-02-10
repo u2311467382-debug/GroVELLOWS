@@ -433,32 +433,38 @@ class StateTenderScraper(TenderScraper):
         "bayern": {
             "name": "Vergabe Bayern",
             "url": "https://www.auftraege.bayern.de",
-            "region": "Bayern"
+            "region": "Bayern",
+            "application_base": "https://www.auftraege.bayern.de/NetServer/PublicationControllerServlet"
         },
         "nrw": {
             "name": "e-Vergabe NRW", 
             "url": "https://www.evergabe.nrw.de",
-            "region": "Nordrhein-Westfalen"
+            "region": "Nordrhein-Westfalen",
+            "application_base": "https://www.evergabe.nrw.de/VMPSatellite/public/bekanntmachung"
         },
         "berlin": {
             "name": "Vergabeplattform Berlin",
             "url": "https://www.berlin.de/vergabeplattform",
-            "region": "Berlin"
+            "region": "Berlin",
+            "application_base": "https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/"
         },
         "hamburg": {
             "name": "Hamburg Vergabe",
             "url": "https://www.hamburg.de/wirtschaft/ausschreibungen-wirtschaft",
-            "region": "Hamburg"
+            "region": "Hamburg",
+            "application_base": "https://www.hamburg.de/vergabe/"
         },
         "sachsen": {
             "name": "Sachsen Vergabe",
             "url": "https://www.sachsen-vergabe.de",
-            "region": "Sachsen"
+            "region": "Sachsen",
+            "application_base": "https://www.sachsen-vergabe.de/vergabe/bekanntmachung/"
         },
         "bw": {
             "name": "Vergabe Baden-Württemberg",
             "url": "https://vergabe.landbw.de",
-            "region": "Baden-Württemberg"
+            "region": "Baden-Württemberg",
+            "application_base": "https://vergabe.landbw.de/NetServer/PublicationControllerServlet"
         }
     }
     
