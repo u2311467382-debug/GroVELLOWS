@@ -729,6 +729,54 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 12,
   },
+  linkButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  applicationLinkButton: {
+    backgroundColor: '#FFF8E1',
+    borderColor: colors.secondary,
+    borderWidth: 2,
+  },
+  linkIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: colors.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  applicationIconContainer: {
+    backgroundColor: colors.secondary,
+  },
+  linkContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  linkLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  applicationLabel: {
+    color: colors.secondary,
+  },
+  linkSource: {
+    fontSize: 13,
+    color: colors.textLight,
+    marginTop: 2,
+  },
+  linkSubtext: {
+    fontSize: 12,
+    color: colors.textLight,
+    marginTop: 2,
+  },
   statusButtons: {
     flexDirection: 'row',
     gap: 8,
