@@ -1,6 +1,7 @@
 """
-Comprehensive Real Tender Scraper for German Construction Tender Platforms
+Comprehensive Real Tender Scraper for German & Swiss Construction Tender Platforms
 Filters tenders based on GroVELLOWS company services
+Includes deduplication logic to show each tender only once with best access link
 """
 
 import asyncio
@@ -12,6 +13,8 @@ from datetime import datetime, timedelta
 from urllib.parse import quote_plus, urljoin
 import re
 import logging
+import hashlib
+from difflib import SequenceMatcher
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,7 +43,7 @@ SERVICE_KEYWORDS = {
 
 # Building typology keywords
 TYPOLOGY_KEYWORDS = {
-    'Healthcare': ['krankenhaus', 'klinik', 'hospital', 'medizin', 'gesundheit', 'pflege', 'arzt', 'charité', 'vivantes'],
+    'Healthcare': ['krankenhaus', 'klinik', 'hospital', 'medizin', 'gesundheit', 'pflege', 'arzt', 'charité', 'vivantes', 'asklepios', 'helios', 'sana'],
     'Education': ['schule', 'universität', 'hochschule', 'gymnasium', 'campus', 'bildung', 'kita', 'kindergarten'],
     'Residential': ['wohn', 'wohnung', 'mehrfamilienhaus', 'einfamilienhaus', 'siedlung', 'quartier'],
     'Commercial': ['büro', 'office', 'gewerbe', 'geschäftshaus', 'verwaltung', 'rathaus'],
@@ -52,6 +55,37 @@ TYPOLOGY_KEYWORDS = {
     'Hospitality': ['hotel', 'gastro', 'restaurant']
 }
 
+# Platform priority for deduplication (higher = better source)
+PLATFORM_PRIORITY = {
+    'Bund.de': 100,
+    'TED Europa': 95,
+    'DTVP': 90,
+    'e-Vergabe Online': 88,
+    'Öffentliche Vergabe': 85,
+    'Vergabe Bayern': 80,
+    'e-Vergabe NRW': 80,
+    'Vergabeplattform Berlin': 80,
+    'Hamburg Vergabe': 80,
+    'Vergabe Baden-Württemberg': 80,
+    'HAD Hessen': 80,
+    'Vergabe Niedersachsen': 80,
+    'Vergabemarktplatz Brandenburg': 80,
+    'Vergabe Rheinland-Pfalz': 80,
+    'Vergabe Saarland': 80,
+    'eVergabe Sachsen-Anhalt': 80,
+    'e-Vergabe Schleswig-Holstein': 80,
+    'Sachsen Vergabe': 80,
+    'Vergabe Bremen': 80,
+    'Vergabe Thüringen': 80,
+    'Ausschreibungen Deutschland': 75,
+    'ibau': 70,
+    'Charité': 85,
+    'Vivantes': 85,
+    'UKE Hamburg': 85,
+    'Fraunhofer': 85,
+    'simap.ch (Schweiz)': 90,
+}
+
 class ComprehensiveScraper:
     def __init__(self, db):
         self.db = db
@@ -61,19 +95,36 @@ class ComprehensiveScraper:
             'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
             'Accept-Language': 'de-DE,de;q=0.9,en;q=0.8'
         }
+        self.seen_tenders = {}  # For deduplication
+    
+    def normalize_title(self, title: str) -> str:
+        """Normalize title for deduplication"""
+        # Remove special characters, lowercase, remove extra spaces
+        normalized = re.sub(r'[^\w\s]', '', title.lower())
+        normalized = ' '.join(normalized.split())
+        return normalized
+    
+    def get_title_hash(self, title: str) -> str:
+        """Create hash of normalized title for fast lookup"""
+        normalized = self.normalize_title(title)
+        return hashlib.md5(normalized.encode()).hexdigest()[:16]
+    
+    def is_similar_title(self, title1: str, title2: str, threshold: float = 0.85) -> bool:
+        """Check if two titles are similar enough to be considered duplicates"""
+        norm1 = self.normalize_title(title1)
+        norm2 = self.normalize_title(title2)
+        return SequenceMatcher(None, norm1, norm2).ratio() >= threshold
     
     def categorize_tender(self, title: str, description: str = "") -> dict:
         """Categorize tender based on company services"""
         text = f"{title} {description}".lower()
         
-        # Find matching category
         category = None
         for cat_name, keywords in SERVICE_KEYWORDS.items():
             if any(kw in text for kw in keywords):
                 category = cat_name
                 break
         
-        # Find building typology
         building_typology = None
         for typ_name, keywords in TYPOLOGY_KEYWORDS.items():
             if any(kw in text for kw in keywords):
@@ -84,13 +135,12 @@ class ComprehensiveScraper:
     
     def extract_budget(self, text: str) -> str:
         """Extract budget/cost from text"""
-        # Look for Euro amounts
         patterns = [
             r'(\d{1,3}(?:\.\d{3})*(?:,\d{2})?\s*(?:EUR|Euro|€))',
             r'(€\s*\d{1,3}(?:\.\d{3})*(?:,\d{2})?)',
             r'(\d{1,3}(?:\.\d{3})*(?:,\d{2})?\s*Mio\.?\s*(?:EUR|Euro|€)?)',
-            r'(Auftragswert[:\s]*\d{1,3}(?:\.\d{3})*(?:,\d{2})?\s*(?:EUR|Euro|€)?)',
-            r'(geschätzter?\s*(?:Wert|Auftragswert)[:\s]*\d{1,3}(?:[.,]\d+)*\s*(?:EUR|Euro|€)?)',
+            r'(CHF\s*\d{1,3}(?:[\',]\d{3})*(?:\.\d{2})?)',
+            r'(\d{1,3}(?:[\',]\d{3})*(?:\.\d{2})?\s*CHF)',
         ]
         
         for pattern in patterns:
@@ -102,17 +152,15 @@ class ComprehensiveScraper:
     
     def extract_deadline(self, text: str) -> datetime:
         """Extract deadline from text"""
-        # German date patterns
         patterns = [
             r'(\d{1,2}\.\d{1,2}\.\d{4})',
             r'(\d{1,2}\.\d{1,2}\.\d{2})',
-            r'(bis\s+\d{1,2}\.\d{1,2}\.\d{4})',
         ]
         
         for pattern in patterns:
             match = re.search(pattern, text)
             if match:
-                date_str = match.group(1).replace('bis ', '')
+                date_str = match.group(1)
                 try:
                     if len(date_str.split('.')[-1]) == 2:
                         return datetime.strptime(date_str, '%d.%m.%y')
@@ -124,17 +172,22 @@ class ComprehensiveScraper:
         return datetime.utcnow() + timedelta(days=30)
     
     def is_relevant_tender(self, title: str, description: str = "") -> bool:
-        """Check if tender matches company services"""
+        """Check if tender matches company services - more permissive for general construction"""
         text = f"{title} {description}".lower()
         
-        # Must match at least one service category
+        # Check service keywords
         for keywords in SERVICE_KEYWORDS.values():
             if any(kw in text for kw in keywords):
                 return True
         
-        # Also check for general construction project management terms
-        general_terms = ['projektsteuerung', 'baumanagement', 'generalplanung', 'objektplanung',
-                        'fachplanung', 'technische ausrüstung', 'tragwerksplanung', 'bauphysik']
+        # General construction terms
+        general_terms = [
+            'projektsteuerung', 'baumanagement', 'generalplanung', 'objektplanung',
+            'fachplanung', 'technische ausrüstung', 'tragwerksplanung', 'bauphysik',
+            'architekten', 'ingenieur', 'planung', 'bau', 'neubau', 'sanierung',
+            'modernisierung', 'erweiterung', 'umbau', 'hochbau', 'tiefbau',
+            'dienstleistung', 'beratung', 'consulting', 'management'
+        ]
         if any(term in text for term in general_terms):
             return True
         
@@ -159,1112 +212,1123 @@ class ComprehensiveScraper:
             'Vergabe Saarland': f"https://vergabe.saarland/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}",
             'eVergabe Sachsen-Anhalt': f"https://www.evergabe.sachsen-anhalt.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}",
             'e-Vergabe Schleswig-Holstein': f"https://www.e-vergabe-sh.de/NetServer/PublicationSearchControllerServlet?searchText={encoded_title}",
-            'Vergabe Thüringen': f"https://www.portal.thueringen.de/vergabe?search={encoded_title}",
+            'Vergabe Thüringen': f"https://www.thueringen.de/vergabe?search={encoded_title}",
             'Bund.de': f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?searchText={encoded_title}",
             'TED Europa': f"https://ted.europa.eu/de/search/result?q={encoded_title}",
             'DTVP': f"https://www.dtvp.de/Center/common/project/search.do?search={encoded_title}",
+            'Öffentliche Vergabe': f"https://www.oeffentlichevergabe.de/search?q={encoded_title}",
+            'Ausschreibungen Deutschland': f"https://ausschreibungen-deutschland.de/?search={encoded_title}",
+            'e-Vergabe Online': f"https://www.evergabe-online.de/search?q={encoded_title}",
+            'ibau': f"https://www.ibau.de/ausschreibungen/?q={encoded_title}",
             'Charité': f"https://vergabeplattform.charite.de/search?q={encoded_title}",
             'Vivantes': f"https://www.vivantes.de/unternehmen/ausschreibungen?search={encoded_title}",
             'UKE Hamburg': f"https://www.uke.de/organisationsstruktur/tochtergesellschaften/kfe/ausschreibungen?search={encoded_title}",
+            'Fraunhofer': f"https://vergabe.fraunhofer.de/?search={encoded_title}",
+            'simap.ch (Schweiz)': f"https://www.simap.ch/en/search?q={encoded_title}",
         }
         
         return url_templates.get(platform_name, base_url)
-    
-    async def scrape_bayern(self) -> list:
-        """Scrape Vergabe Bayern"""
-        tenders = []
+
+    async def fetch_page(self, url: str, timeout: int = 30) -> str:
+        """Fetch a page with error handling"""
         try:
             async with self.session.get(
-                "https://www.auftraege.bayern.de",
+                url,
                 headers=self.headers,
                 ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
+                timeout=aiohttp.ClientTimeout(total=timeout)
             ) as resp:
                 if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    # Extract from ticker
-                    tickers = soup.select('#webTicker li.itemTicker')
-                    logger.info(f"Bayern: Found {len(tickers)} items in ticker")
-                    
-                    for ticker in tickers:
-                        text = ticker.get_text(strip=True)
+                    return await resp.text()
+                else:
+                    logger.warning(f"Status {resp.status} for {url}")
+                    return ""
+        except Exception as e:
+            logger.error(f"Error fetching {url}: {e}")
+            return ""
+
+    # ==================== GERMAN FEDERAL PLATFORMS ====================
+    
+    async def scrape_bund_de(self) -> list:
+        """Scrape SERVICE.BUND.DE - Federal tenders"""
+        tenders = []
+        urls = [
+            "https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Formular.html?nn=4641514&cl2Categories_Typ=vergabe",
+            "https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.searchResult, .result-item, article, .c-teaser')
+                logger.info(f"Bund.de: Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '')
+                            if link and not link.startswith('http'):
+                                link = f"https://www.service.bund.de{link}"
+                            
+                            desc_elem = item.select_one('.description, p, .c-teaser__text')
+                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            cat_info = self.categorize_tender(title, description)
+                            budget = self.extract_budget(f"{title} {description}")
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': description or f"Bundesausschreibung: {title}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'location': 'Deutschland',
+                                'project_type': 'Federal Tender',
+                                'contracting_authority': 'Bundesrepublik Deutschland',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Bund.de',
+                                'platform_url': 'https://www.service.bund.de',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+        
+        return tenders
+
+    async def scrape_evergabe_online(self) -> list:
+        """Scrape e-Vergabe Online - Federal e-procurement"""
+        tenders = []
+        url = "https://www.evergabe-online.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, .publication, table tr, .search-result')
+            logger.info(f"e-Vergabe Online: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.evergabe-online.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"e-Vergabe Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Federal Tender',
+                            'contracting_authority': 'Bundesauftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'e-Vergabe Online',
+                            'platform_url': 'https://www.evergabe-online.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_dtvp(self) -> list:
+        """Scrape Deutsches Vergabeportal (DTVP)"""
+        tenders = []
+        url = "https://www.dtvp.de/Center/common/project/search.do"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.searchResult, article, .tender-item, table tr, .project-row')
+            logger.info(f"DTVP: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, .title, td a')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.dtvp.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"DTVP Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'DTVP',
+                            'platform_url': 'https://www.dtvp.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_oeffentliche_vergabe(self) -> list:
+        """Scrape oeffentlichevergabe.de"""
+        tenders = []
+        url = "https://www.oeffentlichevergabe.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, .publication, table tr, .search-result, .vergabe-item')
+            logger.info(f"Öffentliche Vergabe: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.oeffentlichevergabe.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Öffentliche Vergabe: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Öffentliche Vergabe',
+                            'platform_url': 'https://www.oeffentlichevergabe.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_ausschreibungen_deutschland(self) -> list:
+        """Scrape ausschreibungen-deutschland.de"""
+        tenders = []
+        urls = [
+            "https://ausschreibungen-deutschland.de/",
+            "https://ausschreibungen-deutschland.de/ausschreibungen",
+            "https://ausschreibungen-deutschland.de/bauleistungen",
+            "https://ausschreibungen-deutschland.de/dienstleistungen"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.tender-item, article, .publication, table tr, .ausschreibung, .search-result, a[href*="ausschreibung"]')
+                logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, h2, h3, .title, .ausschreibung-title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"https://ausschreibungen-deutschland.de{link}"
+                            
+                            # Try to get more details
+                            desc_elem = item.select_one('.description, .text, p')
+                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            location_elem = item.select_one('.location, .ort')
+                            location = location_elem.get_text(strip=True) if location_elem else "Deutschland"
+                            
+                            cat_info = self.categorize_tender(title, description)
+                            budget = self.extract_budget(f"{title} {description}")
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': description or f"Ausschreibung: {title}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'location': location,
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Öffentlicher Auftraggeber',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Ausschreibungen Deutschland',
+                                'platform_url': 'https://ausschreibungen-deutschland.de/',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)  # Rate limiting
+        
+        return tenders
+
+    async def scrape_ted_europa(self) -> list:
+        """Scrape TED Europa - EU tenders"""
+        tenders = []
+        urls = [
+            "https://ted.europa.eu/de/search/result?q=projektmanagement%20deutschland",
+            "https://ted.europa.eu/de/search/result?q=baumanagement%20deutschland",
+            "https://ted.europa.eu/de/search/result?q=bauleitung%20deutschland"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.notice-item, .search-result, article, .ted-result')
+                logger.info(f"TED Europa: Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('h2, h3, .title, a.notice-title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"https://ted.europa.eu{link}"
+                            
+                            desc_elem = item.select_one('.description, .summary, p')
+                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            cat_info = self.categorize_tender(title, description)
+                            budget = self.extract_budget(f"{title} {description}")
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': description or f"EU Ausschreibung: {title}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'location': 'EU/Deutschland',
+                                'project_type': 'EU Tender',
+                                'contracting_authority': 'EU Contracting Authority',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'TED Europa',
+                                'platform_url': 'https://ted.europa.eu',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
+        
+        return tenders
+
+    async def scrape_ibau(self) -> list:
+        """Scrape ibau.de"""
+        tenders = []
+        url = "https://www.ibau.de/ausschreibungen/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, .ausschreibung, table tr, .search-result')
+            logger.info(f"ibau: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.ibau.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"ibau Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'ibau',
+                            'platform_url': 'https://www.ibau.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_evergabe_de(self) -> list:
+        """Scrape evergabe.de"""
+        tenders = []
+        url = "https://www.evergabe.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, .publication, table tr, .search-result')
+            logger.info(f"evergabe.de: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"eVergabe Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'eVergabe.de',
+                            'platform_url': 'https://www.evergabe.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    # ==================== GERMAN STATE PLATFORMS ====================
+
+    async def scrape_bayern(self) -> list:
+        """Scrape Vergabe Bayern - multiple URLs"""
+        tenders = []
+        urls = [
+            "https://www.auftraege.bayern.de",
+            "https://www.vergabe.bayern.de",
+            "https://www.bayvebe.bayern.de"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                
+                # Try multiple selectors
+                items = soup.select('#webTicker li.itemTicker, .tender-item, table tr, .publication, article')
+                logger.info(f"Bayern ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    if item.name == 'li':
+                        text = item.get_text(strip=True)
                         match = re.match(r'(.+?)\s*\(([^)]+)\)$', text)
                         if match:
                             title = match.group(1).strip()
                             authority = match.group(2).strip()
-                            
-                            if self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                budget = self.extract_budget(text)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung: {title} - Auftraggeber: {authority}",
-                                    'budget': budget,
-                                    'deadline': self.extract_deadline(text),
-                                    'location': 'Bayern',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': authority,
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Bayern',
-                                    'platform_url': 'https://www.auftraege.bayern.de',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Bayern: {e}")
+                        else:
+                            title = text
+                            authority = 'Bayern'
+                    else:
+                        title_elem = item.select_one('a, .title, td:first-child a')
+                        title = title_elem.get_text(strip=True) if title_elem else ""
+                        authority = 'Bayern'
+                    
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        cat_info = self.categorize_tender(title)
+                        budget = self.extract_budget(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Ausschreibung Bayern: {title}",
+                            'budget': budget,
+                            'deadline': self.extract_deadline(title),
+                            'location': 'Bayern',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': authority,
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Vergabe Bayern',
+                            'platform_url': url,
+                            'country': 'Germany',
+                        })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
+
     async def scrape_nrw(self) -> list:
         """Scrape e-Vergabe NRW"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.evergabe.nrw.de/VMPSatellite/public/search",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    # Find tender listings
-                    items = soup.select('table.searchResults tr, .publication-item, .tender-row')
-                    logger.info(f"NRW: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title, td:first-child a')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 20 and self.is_relevant_tender(title):
-                                # Try to get more details
-                                desc_elem = item.select_one('.description, td:nth-child(2)')
-                                description = desc_elem.get_text(strip=True) if desc_elem else ""
-                                
-                                full_text = f"{title} {description}"
-                                cat_info = self.categorize_tender(title, description)
-                                budget = self.extract_budget(full_text)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': description or f"Ausschreibung NRW: {title}",
-                                    'budget': budget,
-                                    'deadline': self.extract_deadline(full_text),
-                                    'location': 'Nordrhein-Westfalen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land NRW',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'e-Vergabe NRW',
-                                    'platform_url': 'https://www.evergabe.nrw.de',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping NRW: {e}")
+        url = "https://www.evergabe.nrw.de/VMPSatellite/public/search"
         
-        return tenders
-    
-    async def scrape_berlin(self) -> list:
-        """Scrape Vergabeplattform Berlin"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    # Find tender listings
-                    items = soup.select('article, .list-item, table tr, .modul-teaser')
-                    logger.info(f"Berlin: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('h2 a, h3 a, .title a, a.link')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                desc_elem = item.select_one('p, .description, .text')
-                                description = desc_elem.get_text(strip=True) if desc_elem else ""
-                                
-                                full_text = f"{title} {description}"
-                                cat_info = self.categorize_tender(title, description)
-                                budget = self.extract_budget(full_text)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': description or f"Ausschreibung Berlin: {title}",
-                                    'budget': budget,
-                                    'deadline': self.extract_deadline(full_text),
-                                    'location': 'Berlin',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Berlin',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabeplattform Berlin',
-                                    'platform_url': 'https://www.berlin.de/vergabeplattform',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Berlin: {e}")
-        
-        return tenders
-    
-    async def scrape_hamburg(self) -> list:
-        """Scrape Hamburg Vergabe"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/tabs/home",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .tender-item, .publication')
-                    logger.info(f"Hamburg: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title, td a')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Hamburg: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Hamburg',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Freie und Hansestadt Hamburg',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Hamburg Vergabe',
-                                    'platform_url': 'https://fbhh-evergabe.web.hamburg.de',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Hamburg: {e}")
-        
-        return tenders
-    
-    async def scrape_bund(self) -> list:
-        """Scrape Bund.de federal tenders"""
-        tenders = []
-        try:
-            # Try the search results page
-            async with self.session.get(
-                "https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Formular.html",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('.searchResult, .result-item, article')
-                    logger.info(f"Bund.de: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('h2 a, h3 a, .title a')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                desc_elem = item.select_one('.description, p')
-                                description = desc_elem.get_text(strip=True) if desc_elem else ""
-                                
-                                full_text = f"{title} {description}"
-                                cat_info = self.categorize_tender(title, description)
-                                budget = self.extract_budget(full_text)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': description or f"Bundesausschreibung: {title}",
-                                    'budget': budget,
-                                    'deadline': self.extract_deadline(full_text),
-                                    'location': 'Deutschland',
-                                    'project_type': 'Federal Tender',
-                                    'contracting_authority': 'Bundesrepublik Deutschland',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Bund.de',
-                                    'platform_url': 'https://www.service.bund.de',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Bund.de: {e}")
-        
-        return tenders
-    
-    async def scrape_ted(self) -> list:
-        """Scrape TED Europa"""
-        tenders = []
-        try:
-            # TED search for German construction tenders
-            search_url = "https://ted.europa.eu/de/search/result?q=projektmanagement%20bau%20deutschland"
-            async with self.session.get(
-                search_url,
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('.notice-item, .search-result, article')
-                    logger.info(f"TED: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('h2, h3, .title, a.notice-title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                desc_elem = item.select_one('.description, .summary, p')
-                                description = desc_elem.get_text(strip=True) if desc_elem else ""
-                                
-                                full_text = f"{title} {description}"
-                                cat_info = self.categorize_tender(title, description)
-                                budget = self.extract_budget(full_text)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': description or f"EU Ausschreibung: {title}",
-                                    'budget': budget,
-                                    'deadline': self.extract_deadline(full_text),
-                                    'location': 'EU/Deutschland',
-                                    'project_type': 'EU Tender',
-                                    'contracting_authority': 'EU Contracting Authority',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'TED Europa',
-                                    'platform_url': 'https://ted.europa.eu',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping TED: {e}")
-        
-        return tenders
-    
-    async def scrape_hospital_charite(self) -> list:
-        """Scrape Charité hospital tenders"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://vergabeplattform.charite.de",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .tender-item, article')
-                    logger.info(f"Charité: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Charité Ausschreibung: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Berlin',
-                                    'project_type': 'Hospital Tender',
-                                    'contracting_authority': 'Charité - Universitätsmedizin Berlin',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': 'Healthcare',
-                                    'platform_source': 'Charité',
-                                    'platform_url': 'https://vergabeplattform.charite.de',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Charité: {e}")
-        
-        return tenders
-    
-    async def scrape_simap_switzerland(self) -> list:
-        """Scrape simap.ch Switzerland tender platform using their archive"""
-        tenders = []
-        try:
-            # Search for construction-related tenders in archive
-            search_terms = ['projektsteuerung', 'projektmanagement', 'bauleitung', 'baumanagement']
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('table.searchResults tr, .publication-item, .tender-row, article')
+            logger.info(f"NRW: Found {len(items)} items")
             
-            for term in search_terms:
-                url = f"https://archiv.simap.ch/shabforms/COMMON/search/searchresultDetail.jsf?searchText={term}"
-                
-                async with self.session.get(
-                    url,
-                    headers=self.headers,
-                    ssl=False,
-                    timeout=aiohttp.ClientTimeout(total=30)
-                ) as resp:
-                    if resp.status == 200:
-                        html = await resp.text()
-                        soup = BeautifulSoup(html, 'lxml')
+            for item in items:
+                title_elem = item.select_one('a, .title, td:first-child a')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 20 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.evergabe.nrw.de{link}"
                         
-                        # Find result items
-                        items = soup.select('table.resultTable tr, .searchResultItem, .tender-row, tr[data-ri]')
-                        logger.info(f"simap.ch ({term}): Found {len(items)} items")
+                        desc_elem = item.select_one('.description, td:nth-child(2)')
+                        description = desc_elem.get_text(strip=True) if desc_elem else ""
                         
-                        for item in items:
-                            title_elem = item.select_one('a, .title, td:first-child a, td a')
-                            if title_elem:
-                                title = title_elem.get_text(strip=True)
-                                if len(title) > 15 and self.is_relevant_tender(title):
-                                    # Get link
-                                    link = title_elem.get('href', '')
-                                    if link and not link.startswith('http'):
-                                        link = f"https://archiv.simap.ch{link}"
-                                    
-                                    cat_info = self.categorize_tender(title)
-                                    
-                                    tenders.append({
-                                        'title': title,
-                                        'description': f"Schweizer Ausschreibung: {title}",
-                                        'budget': None,
-                                        'deadline': datetime.utcnow() + timedelta(days=30),
-                                        'location': 'Schweiz',
-                                        'project_type': 'Public Tender',
-                                        'contracting_authority': 'Schweizer Öffentlicher Auftraggeber',
-                                        'category': cat_info['category'] or 'Projektmanagement',
-                                        'building_typology': cat_info['building_typology'],
-                                        'platform_source': 'simap.ch (Schweiz)',
-                                        'platform_url': 'https://www.simap.ch',
-                                        'country': 'Switzerland',
-                                    })
-                                    
-                await asyncio.sleep(1)  # Rate limiting
+                        cat_info = self.categorize_tender(title, description)
+                        budget = self.extract_budget(f"{title} {description}")
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': description or f"Ausschreibung NRW: {title}",
+                            'budget': budget,
+                            'deadline': self.extract_deadline(f"{title} {description}"),
+                            'location': 'Nordrhein-Westfalen',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Land NRW',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'e-Vergabe NRW',
+                            'platform_url': 'https://www.evergabe.nrw.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_berlin(self) -> list:
+        """Scrape Vergabeplattform Berlin - multiple sources"""
+        tenders = []
+        urls = [
+            "https://www.berlin.de/vergabeplattform/veroeffentlichungen/bekanntmachungen/",
+            "https://my.vergabeplattform.berlin.de/"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('article, .list-item, table tr, .modul-teaser, .tender-item')
+                logger.info(f"Berlin ({url}): Found {len(items)} items")
                 
-        except Exception as e:
-            logger.error(f"Error scraping simap.ch: {e}")
+                for item in items:
+                    title_elem = item.select_one('h2 a, h3 a, .title a, a.link')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '')
+                            if link and not link.startswith('http'):
+                                link = f"https://www.berlin.de{link}"
+                            
+                            desc_elem = item.select_one('p, .description, .text')
+                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            cat_info = self.categorize_tender(title, description)
+                            budget = self.extract_budget(f"{title} {description}")
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': description or f"Ausschreibung Berlin: {title}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'location': 'Berlin',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Land Berlin',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Vergabeplattform Berlin',
+                                'platform_url': 'https://www.berlin.de/vergabeplattform',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_niedersachsen(self) -> list:
-        """Scrape Niedersachsen (Lower Saxony) tender platform"""
+
+    async def scrape_hamburg(self) -> list:
+        """Scrape Hamburg Vergabe - multiple sources"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://vergabe.niedersachsen.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item, article')
-                    logger.info(f"Niedersachsen: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Niedersachsen: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Niedersachsen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Niedersachsen',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Niedersachsen',
-                                    'platform_url': 'https://vergabe.niedersachsen.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Niedersachsen: {e}")
+        urls = [
+            "https://fbhh-evergabe.web.hamburg.de/evergabe.bieter/eva/supplierportal/fhh/tabs/home",
+            "https://www.hamburg.de/wirtschaft/ausschreibungen-wirtschaft/"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .tender-item, .publication, article, .search-result')
+                logger.info(f"Hamburg ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title, td a')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Ausschreibung Hamburg: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Hamburg',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Freie und Hansestadt Hamburg',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Hamburg Vergabe',
+                                'platform_url': url,
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_hessen(self) -> list:
-        """Scrape Hessen (HAD) tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://www.had.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Hessen HAD: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Hessen: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Hessen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Hessen',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'HAD Hessen',
-                                    'platform_url': 'https://www.had.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Hessen: {e}")
-        
-        return tenders
-    
-    async def scrape_brandenburg(self) -> list:
-        """Scrape Brandenburg tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://vergabemarktplatz.brandenburg.de/VMPSatellite/public/search",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item, .searchResult')
-                    logger.info(f"Brandenburg: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Brandenburg: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Brandenburg',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Brandenburg',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabemarktplatz Brandenburg',
-                                    'platform_url': 'https://vergabemarktplatz.brandenburg.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Brandenburg: {e}")
-        
-        return tenders
-    
-    async def scrape_saarland(self) -> list:
-        """Scrape Saarland tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://vergabe.saarland/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Saarland: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Saarland: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Saarland',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Saarland',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Saarland',
-                                    'platform_url': 'https://vergabe.saarland',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Saarland: {e}")
-        
-        return tenders
-    
-    async def scrape_sachsen_anhalt(self) -> list:
-        """Scrape Sachsen-Anhalt tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://www.evergabe.sachsen-anhalt.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Sachsen-Anhalt: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Sachsen-Anhalt: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Sachsen-Anhalt',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Sachsen-Anhalt',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'eVergabe Sachsen-Anhalt',
-                                    'platform_url': 'https://www.evergabe.sachsen-anhalt.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Sachsen-Anhalt: {e}")
-        
-        return tenders
-    
-    async def scrape_schleswig_holstein(self) -> list:
-        """Scrape Schleswig-Holstein tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://www.e-vergabe-sh.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Schleswig-Holstein: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Schleswig-Holstein: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Schleswig-Holstein',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Schleswig-Holstein',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'e-Vergabe Schleswig-Holstein',
-                                    'platform_url': 'https://www.e-vergabe-sh.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Schleswig-Holstein: {e}")
-        
-        return tenders
-    
-    async def scrape_rheinland_pfalz(self) -> list:
-        """Scrape Rheinland-Pfalz tender platform"""
-        tenders = []
-        try:
-            async with self.session.get(
-                "https://www.vergabe.rlp.de/VMPSatellite/public/search",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item, .searchResult')
-                    logger.info(f"Rheinland-Pfalz: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Rheinland-Pfalz: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Rheinland-Pfalz',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Rheinland-Pfalz',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Rheinland-Pfalz',
-                                    'platform_url': 'https://www.vergabe.rlp.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Rheinland-Pfalz: {e}")
-        
-        return tenders
-    
+
     async def scrape_baden_wuerttemberg(self) -> list:
-        """Scrape Baden-Württemberg tender platform"""
+        """Scrape Baden-Württemberg - multiple sources"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://vergabe.landbw.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Baden-Württemberg: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Baden-Württemberg: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Baden-Württemberg',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Land Baden-Württemberg',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Baden-Württemberg',
-                                    'platform_url': 'https://vergabe.landbw.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Baden-Württemberg: {e}")
+        urls = [
+            "https://vergabe.landbw.de/NetServer/PublicationSearchControllerServlet",
+            "https://www.service-bw.de/web/guest/suche/-/leistungen/category/1005"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .publication-item, article, .search-result')
+                logger.info(f"Baden-Württemberg ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Ausschreibung Baden-Württemberg: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Baden-Württemberg',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Land Baden-Württemberg',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Vergabe Baden-Württemberg',
+                                'platform_url': url,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_sachsen(self) -> list:
-        """Scrape Sachsen tender platform"""
+
+    async def scrape_hessen(self) -> list:
+        """Scrape HAD Hessen"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.sachsen-vergabe.de/vergabe/bekanntmachung/",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item, article')
-                    logger.info(f"Sachsen: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Sachsen: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Sachsen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Freistaat Sachsen',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Sachsen Vergabe',
-                                    'platform_url': 'https://www.sachsen-vergabe.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Sachsen: {e}")
+        url = "https://www.had.de/NetServer/PublicationSearchControllerServlet"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('table tr, .publication-item')
+            logger.info(f"Hessen HAD: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Ausschreibung Hessen: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Hessen',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Land Hessen',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'HAD Hessen',
+                            'platform_url': 'https://www.had.de',
+                            'country': 'Germany',
+                        })
         
         return tenders
-    
-    async def scrape_bremen(self) -> list:
-        """Scrape Bremen tender platform"""
+
+    async def scrape_brandenburg(self) -> list:
+        """Scrape Brandenburg - multiple sources"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.vergabe.bremen.de/NetServer/PublicationSearchControllerServlet",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item')
-                    logger.info(f"Bremen: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Bremen: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Bremen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Freie Hansestadt Bremen',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Bremen',
-                                    'platform_url': 'https://www.vergabe.bremen.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Bremen: {e}")
+        urls = [
+            "https://vergabemarktplatz.brandenburg.de/VMPSatellite/public/search",
+            "https://www.aumass.de/ausschreibungen/brandenburg"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .publication-item, .searchResult, article')
+                logger.info(f"Brandenburg ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Ausschreibung Brandenburg: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Brandenburg',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Land Brandenburg',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Vergabemarktplatz Brandenburg',
+                                'platform_url': url,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_thuringia(self) -> list:
-        """Scrape Thuringia tender platform"""
+
+    async def scrape_niedersachsen(self) -> list:
+        """Scrape Niedersachsen"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.thueringen.de/vergabe/",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('table tr, .publication-item, article')
-                    logger.info(f"Thüringen: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung Thüringen: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Thüringen',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Freistaat Thüringen',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Vergabe Thüringen',
-                                    'platform_url': 'https://www.thueringen.de/vergabe',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Thüringen: {e}")
+        url = "https://vergabe.niedersachsen.de/NetServer/PublicationSearchControllerServlet"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('table tr, .publication-item, article')
+            logger.info(f"Niedersachsen: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Ausschreibung Niedersachsen: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Niedersachsen',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Land Niedersachsen',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Vergabe Niedersachsen',
+                            'platform_url': 'https://vergabe.niedersachsen.de',
+                            'country': 'Germany',
+                        })
         
         return tenders
-    
-    async def scrape_ausschreibungen_deutschland(self) -> list:
-        """Scrape ausschreibungen-deutschland.de"""
+
+    async def scrape_rheinland_pfalz(self) -> list:
+        """Scrape Rheinland-Pfalz - multiple sources"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://ausschreibungen-deutschland.de/",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('.tender-item, article, .publication, table tr')
-                    logger.info(f"Ausschreibungen-Deutschland.de: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, h2, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Ausschreibung: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Deutschland',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Öffentlicher Auftraggeber',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'Ausschreibungen Deutschland',
-                                    'platform_url': 'https://ausschreibungen-deutschland.de/',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping Ausschreibungen-Deutschland.de: {e}")
+        urls = [
+            "https://www.vergabe.rlp.de/VMPSatellite/public/search",
+            "https://www.rlp.vergabekommunal.de/"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .publication-item, .searchResult, article')
+                logger.info(f"Rheinland-Pfalz ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Ausschreibung Rheinland-Pfalz: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Rheinland-Pfalz',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Land Rheinland-Pfalz',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Vergabe Rheinland-Pfalz',
+                                'platform_url': url,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_evergabe_online(self) -> list:
-        """Scrape e-Vergabe Online (Federal)"""
+
+    async def scrape_other_states(self) -> list:
+        """Scrape other German states"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.evergabe-online.de/",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('.tender-item, article, .publication, table tr')
-                    logger.info(f"e-Vergabe Online: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, h2, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"Bundesausschreibung: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Deutschland',
-                                    'project_type': 'Federal Tender',
-                                    'contracting_authority': 'Bundesauftraggeber',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'e-Vergabe Online',
-                                    'platform_url': 'https://www.evergabe-online.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping e-Vergabe Online: {e}")
+        state_urls = {
+            'Saarland': 'https://vergabe.saarland/NetServer/PublicationSearchControllerServlet',
+            'Sachsen-Anhalt': 'https://www.evergabe.sachsen-anhalt.de/NetServer/PublicationSearchControllerServlet',
+            'Schleswig-Holstein': 'https://www.e-vergabe-sh.de/NetServer/PublicationSearchControllerServlet',
+            'Sachsen': 'https://www.sachsen-vergabe.de/vergabe/bekanntmachung/',
+            'Bremen': 'https://www.vergabe.bremen.de/NetServer/PublicationSearchControllerServlet',
+            'Thüringen': 'https://www.thueringen.de/vergabe/',
+        }
+        
+        for state, url in state_urls.items():
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .publication-item, article')
+                logger.info(f"{state}: Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Ausschreibung {state}: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': state,
+                                'project_type': 'Public Tender',
+                                'contracting_authority': f'Land {state}',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': f'Vergabe {state}',
+                                'platform_url': url,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
-    async def scrape_dtvp(self) -> list:
-        """Scrape Deutsches Vergabeportal (DTVP)"""
+
+    # ==================== HOSPITAL/KLINIK PLATFORMS ====================
+
+    async def scrape_hospitals(self) -> list:
+        """Scrape hospital tender platforms"""
         tenders = []
-        try:
-            async with self.session.get(
-                "https://www.dtvp.de/Center/common/project/search.do",
-                headers=self.headers,
-                ssl=False,
-                timeout=aiohttp.ClientTimeout(total=30)
-            ) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    soup = BeautifulSoup(html, 'lxml')
-                    
-                    items = soup.select('.searchResult, article, .tender-item, table tr')
-                    logger.info(f"DTVP: Found {len(items)} items")
-                    
-                    for item in items:
-                        title_elem = item.select_one('a, h2, .title')
-                        if title_elem:
-                            title = title_elem.get_text(strip=True)
-                            if len(title) > 15 and self.is_relevant_tender(title):
-                                cat_info = self.categorize_tender(title)
-                                
-                                tenders.append({
-                                    'title': title,
-                                    'description': f"DTVP Ausschreibung: {title}",
-                                    'budget': None,
-                                    'deadline': datetime.utcnow() + timedelta(days=30),
-                                    'location': 'Deutschland',
-                                    'project_type': 'Public Tender',
-                                    'contracting_authority': 'Öffentlicher Auftraggeber',
-                                    'category': cat_info['category'] or 'Projektmanagement',
-                                    'building_typology': cat_info['building_typology'],
-                                    'platform_source': 'DTVP',
-                                    'platform_url': 'https://www.dtvp.de',
-                                    'country': 'Germany',
-                                })
-        except Exception as e:
-            logger.error(f"Error scraping DTVP: {e}")
+        hospital_urls = {
+            'Charité': 'https://vergabeplattform.charite.de',
+            'Vivantes': 'https://www.vivantes.de/unternehmen/ausschreibungen',
+            'UKE Hamburg': 'https://www.uke.de/organisationsstruktur/tochtergesellschaften/kfe/ausschreibungen',
+            'Pfalzklinikum': 'https://www.pfalzklinikum.de/ueber-uns/ausschreibungen',
+            'KMG Kliniken': 'https://kmg-kliniken.de/ausschreibungen-und-vergaben',
+            'Klinikverbund Südwest': 'https://www.klinikverbund-suedwest.de/der-klinikverbund-suedwest/ansprechpartner/gebaeudemanagement-technische-infrastruktur/ausschreibungen',
+            'Sana Kliniken': 'https://www.sana.de/',
+            'Helios Kliniken': 'https://www.helios-gesundheit.de/',
+            'Asklepios Kliniken': 'https://www.asklepios.com',
+        }
+        
+        for hospital, url in hospital_urls.items():
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .tender-item, article, .ausschreibung, .search-result')
+                logger.info(f"{hospital}: Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title, h2, h3')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"{url.rstrip('/')}/{link.lstrip('/')}"
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"{hospital} Ausschreibung: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Deutschland',
+                                'project_type': 'Hospital Tender',
+                                'contracting_authority': hospital,
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': 'Healthcare',
+                                'platform_source': hospital,
+                                'platform_url': url,
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
         
         return tenders
-    
+
+    async def scrape_fraunhofer(self) -> list:
+        """Scrape Fraunhofer Gesellschaft"""
+        tenders = []
+        url = "https://vergabe.fraunhofer.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('table tr, .tender-item, article, .ausschreibung')
+            logger.info(f"Fraunhofer: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, .title, h2, h3')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Fraunhofer Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Research Institution Tender',
+                            'contracting_authority': 'Fraunhofer Gesellschaft',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Fraunhofer',
+                            'platform_url': url,
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    # ==================== SWISS PLATFORM ====================
+
+    async def scrape_simap_switzerland(self) -> list:
+        """Scrape simap.ch Switzerland"""
+        tenders = []
+        search_terms = ['projektsteuerung', 'projektmanagement', 'bauleitung', 'baumanagement', 'bauherrenberatung']
+        
+        for term in search_terms:
+            url = f"https://archiv.simap.ch/shabforms/COMMON/search/searchresultDetail.jsf?searchText={term}"
+            
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table.resultTable tr, .searchResultItem, .tender-row, tr[data-ri]')
+                logger.info(f"simap.ch ({term}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title, td:first-child a, td a')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '')
+                            if link and not link.startswith('http'):
+                                link = f"https://archiv.simap.ch{link}"
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Schweizer Ausschreibung: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Schweiz',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Schweizer Öffentlicher Auftraggeber',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'simap.ch (Schweiz)',
+                                'platform_url': 'https://www.simap.ch',
+                                'direct_link': link,
+                                'country': 'Switzerland',
+                            })
+            
+            await asyncio.sleep(1)
+        
+        return tenders
+
+    # ==================== DEDUPLICATION ====================
+
+    def deduplicate_tenders(self, all_tenders: list) -> list:
+        """Remove duplicate tenders, keeping the one from the best source"""
+        unique_tenders = {}
+        
+        for tender in all_tenders:
+            title_hash = self.get_title_hash(tender['title'])
+            
+            # Check if we've seen a similar tender
+            found_duplicate = False
+            for existing_hash, existing_tender in list(unique_tenders.items()):
+                if self.is_similar_title(tender['title'], existing_tender['title']):
+                    # Keep the one with higher priority platform
+                    current_priority = PLATFORM_PRIORITY.get(tender['platform_source'], 50)
+                    existing_priority = PLATFORM_PRIORITY.get(existing_tender['platform_source'], 50)
+                    
+                    if current_priority > existing_priority:
+                        # Replace with higher priority source
+                        # But track that it exists on multiple platforms
+                        tender['duplicate_sources'] = existing_tender.get('duplicate_sources', []) + [existing_tender['platform_source']]
+                        unique_tenders[existing_hash] = tender
+                    else:
+                        # Keep existing but note the duplicate
+                        existing_tender['duplicate_sources'] = existing_tender.get('duplicate_sources', []) + [tender['platform_source']]
+                    
+                    found_duplicate = True
+                    break
+            
+            if not found_duplicate:
+                unique_tenders[title_hash] = tender
+        
+        logger.info(f"Deduplication: {len(all_tenders)} -> {len(unique_tenders)} unique tenders")
+        return list(unique_tenders.values())
+
+    # ==================== MAIN SCRAPE ====================
+
     async def scrape_all(self) -> int:
-        """Scrape all platforms and save to database"""
+        """Scrape all platforms and save to database with deduplication"""
         async with aiohttp.ClientSession() as session:
             self.session = session
             
             all_tenders = []
             
-            # Scrape all platforms
-            logger.info("Starting comprehensive scrape of all platforms...")
+            logger.info("Starting comprehensive scrape of ALL platforms...")
             
-            # ========== GERMAN PLATFORMS ==========
-            logger.info("\n=== German Platforms ===")
+            # ========== GERMAN FEDERAL PLATFORMS ==========
+            logger.info("\n=== German Federal Platforms ===")
             
-            bayern_tenders = await self.scrape_bayern()
-            all_tenders.extend(bayern_tenders)
-            logger.info(f"Bayern: {len(bayern_tenders)} relevant tenders")
-            
-            nrw_tenders = await self.scrape_nrw()
-            all_tenders.extend(nrw_tenders)
-            logger.info(f"NRW: {len(nrw_tenders)} relevant tenders")
-            
-            berlin_tenders = await self.scrape_berlin()
-            all_tenders.extend(berlin_tenders)
-            logger.info(f"Berlin: {len(berlin_tenders)} relevant tenders")
-            
-            hamburg_tenders = await self.scrape_hamburg()
-            all_tenders.extend(hamburg_tenders)
-            logger.info(f"Hamburg: {len(hamburg_tenders)} relevant tenders")
-            
-            bund_tenders = await self.scrape_bund()
+            bund_tenders = await self.scrape_bund_de()
             all_tenders.extend(bund_tenders)
-            logger.info(f"Bund.de: {len(bund_tenders)} relevant tenders")
-            
-            ted_tenders = await self.scrape_ted()
-            all_tenders.extend(ted_tenders)
-            logger.info(f"TED Europa: {len(ted_tenders)} relevant tenders")
-            
-            charite_tenders = await self.scrape_hospital_charite()
-            all_tenders.extend(charite_tenders)
-            logger.info(f"Charité: {len(charite_tenders)} relevant tenders")
-            
-            # Additional German State Platforms
-            niedersachsen_tenders = await self.scrape_niedersachsen()
-            all_tenders.extend(niedersachsen_tenders)
-            logger.info(f"Niedersachsen: {len(niedersachsen_tenders)} relevant tenders")
-            
-            hessen_tenders = await self.scrape_hessen()
-            all_tenders.extend(hessen_tenders)
-            logger.info(f"Hessen: {len(hessen_tenders)} relevant tenders")
-            
-            brandenburg_tenders = await self.scrape_brandenburg()
-            all_tenders.extend(brandenburg_tenders)
-            logger.info(f"Brandenburg: {len(brandenburg_tenders)} relevant tenders")
-            
-            saarland_tenders = await self.scrape_saarland()
-            all_tenders.extend(saarland_tenders)
-            logger.info(f"Saarland: {len(saarland_tenders)} relevant tenders")
-            
-            sachsen_anhalt_tenders = await self.scrape_sachsen_anhalt()
-            all_tenders.extend(sachsen_anhalt_tenders)
-            logger.info(f"Sachsen-Anhalt: {len(sachsen_anhalt_tenders)} relevant tenders")
-            
-            schleswig_tenders = await self.scrape_schleswig_holstein()
-            all_tenders.extend(schleswig_tenders)
-            logger.info(f"Schleswig-Holstein: {len(schleswig_tenders)} relevant tenders")
-            
-            rheinland_tenders = await self.scrape_rheinland_pfalz()
-            all_tenders.extend(rheinland_tenders)
-            logger.info(f"Rheinland-Pfalz: {len(rheinland_tenders)} relevant tenders")
-            
-            bw_tenders = await self.scrape_baden_wuerttemberg()
-            all_tenders.extend(bw_tenders)
-            logger.info(f"Baden-Württemberg: {len(bw_tenders)} relevant tenders")
-            
-            sachsen_tenders = await self.scrape_sachsen()
-            all_tenders.extend(sachsen_tenders)
-            logger.info(f"Sachsen: {len(sachsen_tenders)} relevant tenders")
-            
-            bremen_tenders = await self.scrape_bremen()
-            all_tenders.extend(bremen_tenders)
-            logger.info(f"Bremen: {len(bremen_tenders)} relevant tenders")
-            
-            thuringia_tenders = await self.scrape_thuringia()
-            all_tenders.extend(thuringia_tenders)
-            logger.info(f"Thüringen: {len(thuringia_tenders)} relevant tenders")
-            
-            # German National Platforms
-            ausch_de_tenders = await self.scrape_ausschreibungen_deutschland()
-            all_tenders.extend(ausch_de_tenders)
-            logger.info(f"Ausschreibungen Deutschland: {len(ausch_de_tenders)} relevant tenders")
+            logger.info(f"Bund.de: {len(bund_tenders)} tenders")
             
             evergabe_tenders = await self.scrape_evergabe_online()
             all_tenders.extend(evergabe_tenders)
-            logger.info(f"e-Vergabe Online: {len(evergabe_tenders)} relevant tenders")
+            logger.info(f"e-Vergabe Online: {len(evergabe_tenders)} tenders")
             
             dtvp_tenders = await self.scrape_dtvp()
             all_tenders.extend(dtvp_tenders)
-            logger.info(f"DTVP: {len(dtvp_tenders)} relevant tenders")
+            logger.info(f"DTVP: {len(dtvp_tenders)} tenders")
             
-            # ========== SWISS PLATFORMS ==========
+            oeff_tenders = await self.scrape_oeffentliche_vergabe()
+            all_tenders.extend(oeff_tenders)
+            logger.info(f"Öffentliche Vergabe: {len(oeff_tenders)} tenders")
+            
+            ausch_de_tenders = await self.scrape_ausschreibungen_deutschland()
+            all_tenders.extend(ausch_de_tenders)
+            logger.info(f"Ausschreibungen Deutschland: {len(ausch_de_tenders)} tenders")
+            
+            ted_tenders = await self.scrape_ted_europa()
+            all_tenders.extend(ted_tenders)
+            logger.info(f"TED Europa: {len(ted_tenders)} tenders")
+            
+            ibau_tenders = await self.scrape_ibau()
+            all_tenders.extend(ibau_tenders)
+            logger.info(f"ibau: {len(ibau_tenders)} tenders")
+            
+            evergabe_de_tenders = await self.scrape_evergabe_de()
+            all_tenders.extend(evergabe_de_tenders)
+            logger.info(f"evergabe.de: {len(evergabe_de_tenders)} tenders")
+            
+            # ========== GERMAN STATE PLATFORMS ==========
+            logger.info("\n=== German State Platforms ===")
+            
+            bayern_tenders = await self.scrape_bayern()
+            all_tenders.extend(bayern_tenders)
+            logger.info(f"Bayern: {len(bayern_tenders)} tenders")
+            
+            nrw_tenders = await self.scrape_nrw()
+            all_tenders.extend(nrw_tenders)
+            logger.info(f"NRW: {len(nrw_tenders)} tenders")
+            
+            berlin_tenders = await self.scrape_berlin()
+            all_tenders.extend(berlin_tenders)
+            logger.info(f"Berlin: {len(berlin_tenders)} tenders")
+            
+            hamburg_tenders = await self.scrape_hamburg()
+            all_tenders.extend(hamburg_tenders)
+            logger.info(f"Hamburg: {len(hamburg_tenders)} tenders")
+            
+            bw_tenders = await self.scrape_baden_wuerttemberg()
+            all_tenders.extend(bw_tenders)
+            logger.info(f"Baden-Württemberg: {len(bw_tenders)} tenders")
+            
+            hessen_tenders = await self.scrape_hessen()
+            all_tenders.extend(hessen_tenders)
+            logger.info(f"Hessen: {len(hessen_tenders)} tenders")
+            
+            brandenburg_tenders = await self.scrape_brandenburg()
+            all_tenders.extend(brandenburg_tenders)
+            logger.info(f"Brandenburg: {len(brandenburg_tenders)} tenders")
+            
+            niedersachsen_tenders = await self.scrape_niedersachsen()
+            all_tenders.extend(niedersachsen_tenders)
+            logger.info(f"Niedersachsen: {len(niedersachsen_tenders)} tenders")
+            
+            rlp_tenders = await self.scrape_rheinland_pfalz()
+            all_tenders.extend(rlp_tenders)
+            logger.info(f"Rheinland-Pfalz: {len(rlp_tenders)} tenders")
+            
+            other_state_tenders = await self.scrape_other_states()
+            all_tenders.extend(other_state_tenders)
+            logger.info(f"Other States: {len(other_state_tenders)} tenders")
+            
+            # ========== HOSPITAL PLATFORMS ==========
+            logger.info("\n=== Hospital Platforms ===")
+            
+            hospital_tenders = await self.scrape_hospitals()
+            all_tenders.extend(hospital_tenders)
+            logger.info(f"Hospitals: {len(hospital_tenders)} tenders")
+            
+            fraunhofer_tenders = await self.scrape_fraunhofer()
+            all_tenders.extend(fraunhofer_tenders)
+            logger.info(f"Fraunhofer: {len(fraunhofer_tenders)} tenders")
+            
+            # ========== SWISS PLATFORM ==========
             logger.info("\n=== Swiss Platforms ===")
             
             simap_tenders = await self.scrape_simap_switzerland()
             all_tenders.extend(simap_tenders)
-            logger.info(f"simap.ch (Schweiz): {len(simap_tenders)} relevant tenders")
+            logger.info(f"simap.ch: {len(simap_tenders)} tenders")
             
-            # Save to database
+            # ========== DEDUPLICATION ==========
+            logger.info(f"\n=== Deduplication ===")
+            logger.info(f"Total scraped before deduplication: {len(all_tenders)}")
+            
+            unique_tenders = self.deduplicate_tenders(all_tenders)
+            logger.info(f"After deduplication: {len(unique_tenders)} unique tenders")
+            
+            # ========== SAVE TO DATABASE ==========
             added_count = 0
-            for tender in all_tenders:
-                # Check for duplicates
+            for tender in unique_tenders:
+                # Check for existing in database
                 existing = await self.db.tenders.find_one({'title': tender['title']})
                 if not existing:
                     # Add common fields
@@ -1285,12 +1349,9 @@ class ComprehensiveScraper:
                     tender['updated_at'] = datetime.utcnow()
                     tender['source_id'] = f"{tender['platform_source']}_{hash(tender['title'])}"
                     
-                    # Ensure country field is set
+                    # Ensure country field
                     if 'country' not in tender:
-                        if 'schweiz' in tender.get('location', '').lower() or 'simap' in tender.get('platform_source', '').lower():
-                            tender['country'] = 'Switzerland'
-                        else:
-                            tender['country'] = 'Germany'
+                        tender['country'] = 'Germany'
                     
                     await self.db.tenders.insert_one(tender)
                     added_count += 1
@@ -1326,6 +1387,14 @@ async def main():
     print("\n=== Platform Distribution ===")
     async for doc in db.tenders.aggregate([
         {'$group': {'_id': '$platform_source', 'count': {'$sum': 1}}},
+        {'$sort': {'count': -1}}
+    ]):
+        print(f"  {doc['_id']}: {doc['count']}")
+    
+    # Show country distribution
+    print("\n=== Country Distribution ===")
+    async for doc in db.tenders.aggregate([
+        {'$group': {'_id': '$country', 'count': {'$sum': 1}}},
         {'$sort': {'count': -1}}
     ]):
         print(f"  {doc['_id']}: {doc['count']}")
