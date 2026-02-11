@@ -219,6 +219,7 @@ export default function TendersScreen() {
     setSelectedCategory('All');
     setSelectedStatus('All');
     setSelectedTypology('All');
+    setSelectedCountry('All');
     setSearchQuery('');
     setSortBy('date_desc');
   };
