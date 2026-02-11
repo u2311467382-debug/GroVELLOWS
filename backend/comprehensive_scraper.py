@@ -1824,6 +1824,57 @@ class ComprehensiveScraper:
             all_tenders.extend(fraunhofer_tenders)
             logger.info(f"Fraunhofer: {len(fraunhofer_tenders)} tenders")
             
+            # ========== ADDITIONAL USER-REQUESTED PLATFORMS ==========
+            logger.info("\n=== Additional German Platforms (User Requested) ===")
+            
+            tender_impulse_tenders = await self.scrape_tender_impulse()
+            all_tenders.extend(tender_impulse_tenders)
+            logger.info(f"Tender Impulse: {len(tender_impulse_tenders)} tenders")
+            
+            vergabe24_tenders = await self.scrape_vergabe24()
+            all_tenders.extend(vergabe24_tenders)
+            logger.info(f"vergabe24: {len(vergabe24_tenders)} tenders")
+            
+            dtad_tenders = await self.scrape_dtad()
+            all_tenders.extend(dtad_tenders)
+            logger.info(f"DTAD: {len(dtad_tenders)} tenders")
+            
+            cwc_tenders = await self.scrape_cwc_tenders()
+            all_tenders.extend(cwc_tenders)
+            logger.info(f"CWC Tenders: {len(cwc_tenders)} tenders")
+            
+            bidding_source_tenders = await self.scrape_bidding_source()
+            all_tenders.extend(bidding_source_tenders)
+            logger.info(f"BiddingSource: {len(bidding_source_tenders)} tenders")
+            
+            a24_tenders = await self.scrape_a24_salescloud()
+            all_tenders.extend(a24_tenders)
+            logger.info(f"A24 Sales Cloud: {len(a24_tenders)} tenders")
+            
+            berlin_procurement_tenders = await self.scrape_berlin_procurement()
+            all_tenders.extend(berlin_procurement_tenders)
+            logger.info(f"Berlin Procurement: {len(berlin_procurement_tenders)} tenders")
+            
+            lzbw_tenders = await self.scrape_lzbw()
+            all_tenders.extend(lzbw_tenders)
+            logger.info(f"LZBW: {len(lzbw_tenders)} tenders")
+            
+            baunetzwerk_tenders = await self.scrape_de_baunetzwerk()
+            all_tenders.extend(baunetzwerk_tenders)
+            logger.info(f"D&E BauNetzwerk: {len(baunetzwerk_tenders)} tenders")
+            
+            global_tenders = await self.scrape_global_tenders_germany()
+            all_tenders.extend(global_tenders)
+            logger.info(f"Global Tenders Germany: {len(global_tenders)} tenders")
+            
+            aumass_tenders = await self.scrape_aumass()
+            all_tenders.extend(aumass_tenders)
+            logger.info(f"AUMASS: {len(aumass_tenders)} tenders")
+            
+            additional_hospital_tenders = await self.scrape_additional_hospitals()
+            all_tenders.extend(additional_hospital_tenders)
+            logger.info(f"Additional Hospitals: {len(additional_hospital_tenders)} tenders")
+            
             # ========== SWISS PLATFORM ==========
             logger.info("\n=== Swiss Platforms ===")
             
