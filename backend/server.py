@@ -2663,36 +2663,24 @@ async def get_breach_risks():
 async def auto_scrape_tenders():
     """
     Background task that runs every minute to scrape new tenders.
+    Uses the comprehensive scraper for all German and Swiss platforms.
     Creates notifications for new tenders found.
     """
     try:
-        from scraper import scrape_all_portals
+        from comprehensive_scraper import ComprehensiveScraper
         
-        logger.info("🔄 Auto-scrape tenders started...")
+        logger.info("🔄 Auto-scrape tenders started (Comprehensive)...")
         
-        # Get existing source_ids to detect new tenders
-        existing_ids = set()
-        async for tender in db.tenders.find({}, {"source_id": 1}):
-            if tender.get("source_id"):
-                existing_ids.add(tender["source_id"])
-        
-        # Scrape all portals
-        scraped_tenders = await scrape_all_portals(max_per_portal=30)
-        
-        new_count = 0
-        new_tenders = []
-        
-        for tender in scraped_tenders:
-            source_id = tender.get("source_id", "")
-            if source_id and source_id not in existing_ids:
-                await db.tenders.insert_one(tender)
-                new_count += 1
-                new_tenders.append(tender)
-                existing_ids.add(source_id)
+        # Run comprehensive scraper
+        scraper = ComprehensiveScraper(db)
+        new_count = await scraper.scrape_all()
         
         # Create notifications for all users about new tenders
         if new_count > 0:
             users = await db.users.find({"notification_preferences.new_tenders": True}).to_list(1000)
+            
+            # Get the most recent tenders
+            recent_tenders = await db.tenders.find({}).sort("created_at", -1).limit(5).to_list(5)
             
             for user in users:
                 notification = {
@@ -2700,7 +2688,7 @@ async def auto_scrape_tenders():
                     "type": "new_tenders",
                     "title": f"🆕 {new_count} neue Ausschreibungen gefunden",
                     "message": f"{new_count} neue Ausschreibungen wurden automatisch hinzugefügt.",
-                    "tenders": [{"id": str(t.get("_id", "")), "title": t.get("title", "")[:50]} for t in new_tenders[:5]],
+                    "tenders": [{"id": str(t.get("_id", "")), "title": t.get("title", "")[:50]} for t in recent_tenders],
                     "is_read": False,
                     "sound": False,  # Silent notification
                     "created_at": datetime.utcnow()
@@ -2708,7 +2696,7 @@ async def auto_scrape_tenders():
                 await db.notifications.insert_one(notification)
             
             # Send push notifications for each new tender (like WhatsApp)
-            for tender in new_tenders[:3]:  # Limit to 3 push notifications
+            for tender in recent_tenders[:3]:  # Limit to 3 push notifications
                 await notify_users_new_tender(tender)
             
             logger.info(f"✅ Auto-scrape tenders complete: {new_count} new tenders, {len(users)} users notified")
