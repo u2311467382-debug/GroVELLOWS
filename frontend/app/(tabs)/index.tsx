@@ -398,7 +398,7 @@ export default function TendersScreen() {
             onPress={() => setShowFilters(true)}
           >
             <Ionicons name="options" size={22} color={colors.primary} />
-            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All') && (
+            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || selectedCountry !== 'All') && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
@@ -412,6 +412,21 @@ export default function TendersScreen() {
           >
             <Ionicons name="swap-vertical" size={14} color={sortBy !== 'date_desc' ? colors.textWhite : colors.primary} />
             <Text style={[styles.quickFilterText, sortBy !== 'date_desc' && styles.quickFilterTextActive]}>Sort</Text>
+          </TouchableOpacity>
+          
+          {/* Country Filters */}
+          <TouchableOpacity
+            style={[styles.quickFilterChip, selectedCountry === 'Germany' && styles.quickFilterChipActive]}
+            onPress={() => setSelectedCountry(selectedCountry === 'Germany' ? 'All' : 'Germany')}
+          >
+            <Text style={[styles.quickFilterText, selectedCountry === 'Germany' && styles.quickFilterTextActive]}>🇩🇪 Germany</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.quickFilterChip, selectedCountry === 'Switzerland' && styles.quickFilterChipActive]}
+            onPress={() => setSelectedCountry(selectedCountry === 'Switzerland' ? 'All' : 'Switzerland')}
+          >
+            <Text style={[styles.quickFilterText, selectedCountry === 'Switzerland' && styles.quickFilterTextActive]}>🇨🇭 Switzerland</Text>
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -435,14 +450,6 @@ export default function TendersScreen() {
           >
             <Ionicons name="business" size={14} color={selectedTypology === 'Infrastructure' ? colors.textWhite : colors.primary} />
             <Text style={[styles.quickFilterText, selectedTypology === 'Infrastructure' && styles.quickFilterTextActive]}>Infrastruktur</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.quickFilterChip, selectedTypology === 'Bauprojekt' && styles.quickFilterChipActive]}
-            onPress={() => setSelectedTypology(selectedTypology === 'Bauprojekt' ? 'All' : 'Bauprojekt')}
-          >
-            <Ionicons name="construct" size={14} color={selectedTypology === 'Bauprojekt' ? colors.textWhite : colors.primary} />
-            <Text style={[styles.quickFilterText, selectedTypology === 'Bauprojekt' && styles.quickFilterTextActive]}>Bauprojekt</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
