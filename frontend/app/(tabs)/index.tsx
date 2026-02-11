@@ -32,6 +32,7 @@ interface Tender {
   platform_url?: string;
   application_url?: string;
   building_typology?: string;
+  country?: string;
   is_applied?: boolean;
   application_status?: string;
 }
