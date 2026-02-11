@@ -3,140 +3,84 @@
     "test": "Director Login",
     "success": true,
     "details": "Role: Director, Token received",
-    "timestamp": "2026-02-02T16:38:11.019136",
+    "timestamp": "2026-02-11T10:21:45.524092",
     "response_data": null
   },
   {
     "test": "Regular User Login",
-    "success": true,
-    "details": "Role: Project Manager, Token received",
-    "timestamp": "2026-02-02T16:38:11.259811",
+    "success": false,
+    "details": "Status: 401, Response: {\"detail\":\"Invalid credentials\"}",
+    "timestamp": "2026-02-11T10:21:45.578092",
     "response_data": null
   },
   {
-    "test": "Get Scrape Status",
-    "success": true,
-    "details": "Status retrieved: {'total_tenders': 22, 'scraped_tenders': 6, 'seeded_tenders': 16, 'last_scrape': '2026-02-02T16:32:35.571000', 'sources': {'bund_de': 1, 'ted_europa': 0, 'state_portals': 17}}",
-    "timestamp": "2026-02-02T16:38:11.279170",
+    "test": "Tender Count Requirement",
+    "success": false,
+    "details": "Only 129 tenders found, expected \u2265145",
+    "timestamp": "2026-02-11T10:21:45.601850",
     "response_data": null
   },
   {
-    "test": "Live Scrape All",
+    "test": "Platform Source Variety",
     "success": true,
-    "details": "Scrape initiated: {'message': 'Scraping complete', 'count': 6, 'duplicates_skipped': 0, 'sources': ['Bund.de', 'TED Europa', 'State Portals']}",
-    "timestamp": "2026-02-02T16:38:19.218178",
+    "details": "Found 6 platforms including required: Ausschreibungen Deutschland, Vergabe Bayern, Asklepios Kliniken",
+    "timestamp": "2026-02-11T10:21:45.601895",
     "response_data": null
   },
   {
-    "test": "Scrape Permission Check",
-    "success": true,
-    "details": "Regular users correctly blocked from scraping",
-    "timestamp": "2026-02-02T16:38:19.234396",
+    "test": "Country Field Verification",
+    "success": false,
+    "details": "Germany not found in country fields. Found: ",
+    "timestamp": "2026-02-11T10:21:45.601902",
     "response_data": null
   },
   {
-    "test": "Get All Employees",
+    "test": "Scrape Status Check",
     "success": true,
-    "details": "Retrieved 5 employees",
-    "timestamp": "2026-02-02T16:38:19.286998",
+    "details": "Status retrieved successfully",
+    "timestamp": "2026-02-11T10:21:45.656769",
     "response_data": null
   },
   {
-    "test": "Share Tender",
+    "test": "Comprehensive Scraper Trigger",
     "success": true,
-    "details": "Tender shared successfully",
-    "timestamp": "2026-02-02T16:38:19.367505",
+    "details": "Scraping completed: 0 new tenders",
+    "timestamp": "2026-02-11T10:23:12.497381",
     "response_data": null
   },
   {
-    "test": "Get Share Inbox",
+    "test": "German Platform Count",
     "success": true,
-    "details": "Retrieved 0 shared tenders",
-    "timestamp": "2026-02-02T16:38:19.418832",
+    "details": "Uses 15 German platforms (\u226515 required)",
+    "timestamp": "2026-02-11T10:23:12.497404",
     "response_data": null
   },
   {
-    "test": "Apply to Tender",
-    "success": true,
-    "details": "Successfully applied to tender",
-    "timestamp": "2026-02-02T16:38:19.487626",
+    "test": "Country Filter (Germany)",
+    "success": false,
+    "details": "Filter issue: 129 tenders, all_germany=False",
+    "timestamp": "2026-02-11T10:23:12.520358",
     "response_data": null
   },
   {
-    "test": "Update Application Status",
-    "success": true,
-    "details": "Status updated to Won",
-    "timestamp": "2026-02-02T16:38:19.500660",
+    "test": "Platform Source Filter",
+    "success": false,
+    "details": "Filter issue: incorrect platform sources in results",
+    "timestamp": "2026-02-11T10:23:12.553997",
     "response_data": null
   },
   {
-    "test": "Get My Applications",
-    "success": true,
-    "details": "Retrieved 1 applications",
-    "timestamp": "2026-02-02T16:38:19.513466",
+    "test": "Required Fields Verification",
+    "success": false,
+    "details": "Missing fields found: {'country': '100/100'}",
+    "timestamp": "2026-02-11T10:23:12.554151",
     "response_data": null
   },
   {
-    "test": "Remove Application",
+    "test": "Deduplication Verification",
     "success": true,
-    "details": "Successfully removed application",
-    "timestamp": "2026-02-02T16:38:19.568353",
-    "response_data": null
-  },
-  {
-    "test": "Get Tender Connections",
-    "success": true,
-    "details": "Found 3 relevant connections",
-    "timestamp": "2026-02-02T16:38:19.587834",
-    "response_data": null
-  },
-  {
-    "test": "Get Privacy Policy",
-    "success": true,
-    "details": "German privacy policy retrieved",
-    "timestamp": "2026-02-02T16:38:19.636927",
-    "response_data": null
-  },
-  {
-    "test": "Export Personal Data",
-    "success": true,
-    "details": "Data export successful (Article 20 compliance)",
-    "timestamp": "2026-02-02T16:38:19.648506",
-    "response_data": null
-  },
-  {
-    "test": "Account Deletion Safety",
-    "success": true,
-    "details": "Deletion requires confirmation (safety check)",
-    "timestamp": "2026-02-02T16:38:19.657412",
-    "response_data": null
-  },
-  {
-    "test": "Account Deletion",
-    "success": true,
-    "details": "Deletion endpoint available (not executed to preserve test account)",
-    "timestamp": "2026-02-02T16:38:19.657439",
-    "response_data": null
-  },
-  {
-    "test": "Get Tenders",
-    "success": true,
-    "details": "Retrieved 28 tenders",
-    "timestamp": "2026-02-02T16:38:19.667115",
-    "response_data": null
-  },
-  {
-    "test": "Building Typology Filter",
-    "success": true,
-    "details": "Found 3 healthcare tenders",
-    "timestamp": "2026-02-02T16:38:19.677433",
-    "response_data": null
-  },
-  {
-    "test": "Get Public Portals",
-    "success": true,
-    "details": "Retrieved 18 portals",
-    "timestamp": "2026-02-02T16:38:19.690281",
+    "details": "No duplicate titles found in 129 tenders",
+    "timestamp": "2026-02-11T10:23:12.554180",
     "response_data": null
   }
 ]
