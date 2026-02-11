@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-GroVELLOWS Backend Comprehensive Test Suite
-Testing all new features for deployment approval
+GroVELLOWS Tender Tracking API Test Suite
+Testing specific requirements from review request:
+1. Authentication with director@grovellows.de / Director123
+2. Tender API - should return 145+ tenders from multiple platforms
+3. Scraping API - POST /api/scrape/all (requires Director role)
+4. Filters - country=Germany, platform_source filtering
+5. Data Integrity - verify fields and deduplication
 """
 
 import requests
