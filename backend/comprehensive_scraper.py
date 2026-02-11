@@ -1165,6 +1165,9 @@ class ComprehensiveScraper:
             # Scrape all platforms
             logger.info("Starting comprehensive scrape of all platforms...")
             
+            # ========== GERMAN PLATFORMS ==========
+            logger.info("\n=== German Platforms ===")
+            
             bayern_tenders = await self.scrape_bayern()
             all_tenders.extend(bayern_tenders)
             logger.info(f"Bayern: {len(bayern_tenders)} relevant tenders")
@@ -1193,6 +1196,71 @@ class ComprehensiveScraper:
             all_tenders.extend(charite_tenders)
             logger.info(f"Charité: {len(charite_tenders)} relevant tenders")
             
+            # Additional German State Platforms
+            niedersachsen_tenders = await self.scrape_niedersachsen()
+            all_tenders.extend(niedersachsen_tenders)
+            logger.info(f"Niedersachsen: {len(niedersachsen_tenders)} relevant tenders")
+            
+            hessen_tenders = await self.scrape_hessen()
+            all_tenders.extend(hessen_tenders)
+            logger.info(f"Hessen: {len(hessen_tenders)} relevant tenders")
+            
+            brandenburg_tenders = await self.scrape_brandenburg()
+            all_tenders.extend(brandenburg_tenders)
+            logger.info(f"Brandenburg: {len(brandenburg_tenders)} relevant tenders")
+            
+            saarland_tenders = await self.scrape_saarland()
+            all_tenders.extend(saarland_tenders)
+            logger.info(f"Saarland: {len(saarland_tenders)} relevant tenders")
+            
+            sachsen_anhalt_tenders = await self.scrape_sachsen_anhalt()
+            all_tenders.extend(sachsen_anhalt_tenders)
+            logger.info(f"Sachsen-Anhalt: {len(sachsen_anhalt_tenders)} relevant tenders")
+            
+            schleswig_tenders = await self.scrape_schleswig_holstein()
+            all_tenders.extend(schleswig_tenders)
+            logger.info(f"Schleswig-Holstein: {len(schleswig_tenders)} relevant tenders")
+            
+            rheinland_tenders = await self.scrape_rheinland_pfalz()
+            all_tenders.extend(rheinland_tenders)
+            logger.info(f"Rheinland-Pfalz: {len(rheinland_tenders)} relevant tenders")
+            
+            bw_tenders = await self.scrape_baden_wuerttemberg()
+            all_tenders.extend(bw_tenders)
+            logger.info(f"Baden-Württemberg: {len(bw_tenders)} relevant tenders")
+            
+            sachsen_tenders = await self.scrape_sachsen()
+            all_tenders.extend(sachsen_tenders)
+            logger.info(f"Sachsen: {len(sachsen_tenders)} relevant tenders")
+            
+            bremen_tenders = await self.scrape_bremen()
+            all_tenders.extend(bremen_tenders)
+            logger.info(f"Bremen: {len(bremen_tenders)} relevant tenders")
+            
+            thuringia_tenders = await self.scrape_thuringia()
+            all_tenders.extend(thuringia_tenders)
+            logger.info(f"Thüringen: {len(thuringia_tenders)} relevant tenders")
+            
+            # German National Platforms
+            ausch_de_tenders = await self.scrape_ausschreibungen_deutschland()
+            all_tenders.extend(ausch_de_tenders)
+            logger.info(f"Ausschreibungen Deutschland: {len(ausch_de_tenders)} relevant tenders")
+            
+            evergabe_tenders = await self.scrape_evergabe_online()
+            all_tenders.extend(evergabe_tenders)
+            logger.info(f"e-Vergabe Online: {len(evergabe_tenders)} relevant tenders")
+            
+            dtvp_tenders = await self.scrape_dtvp()
+            all_tenders.extend(dtvp_tenders)
+            logger.info(f"DTVP: {len(dtvp_tenders)} relevant tenders")
+            
+            # ========== SWISS PLATFORMS ==========
+            logger.info("\n=== Swiss Platforms ===")
+            
+            simap_tenders = await self.scrape_simap_switzerland()
+            all_tenders.extend(simap_tenders)
+            logger.info(f"simap.ch (Schweiz): {len(simap_tenders)} relevant tenders")
+            
             # Save to database
             added_count = 0
             for tender in all_tenders:
@@ -1216,6 +1284,13 @@ class ComprehensiveScraper:
                     tender['created_at'] = datetime.utcnow()
                     tender['updated_at'] = datetime.utcnow()
                     tender['source_id'] = f"{tender['platform_source']}_{hash(tender['title'])}"
+                    
+                    # Ensure country field is set
+                    if 'country' not in tender:
+                        if 'schweiz' in tender.get('location', '').lower() or 'simap' in tender.get('platform_source', '').lower():
+                            tender['country'] = 'Switzerland'
+                        else:
+                            tender['country'] = 'Germany'
                     
                     await self.db.tenders.insert_one(tender)
                     added_count += 1
