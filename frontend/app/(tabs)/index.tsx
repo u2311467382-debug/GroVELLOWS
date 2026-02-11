@@ -622,6 +622,32 @@ export default function TendersScreen() {
                   ))}
                 </View>
               </View>
+
+              {/* Country/Platform Filter Section */}
+              <View style={styles.filterSection}>
+                <Text style={styles.filterLabel}>Country / Platform</Text>
+                <View style={styles.filterGrid}>
+                  {COUNTRIES.map((country) => (
+                    <TouchableOpacity
+                      key={country}
+                      style={[
+                        styles.filterChip,
+                        selectedCountry === country && styles.filterChipActive,
+                      ]}
+                      onPress={() => setSelectedCountry(country)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          selectedCountry === country && styles.filterChipTextActive,
+                        ]}
+                      >
+                        {country === 'Germany' ? '🇩🇪 Germany' : country === 'Switzerland' ? '🇨🇭 Switzerland' : country}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </ScrollView>
 
             <View style={styles.modalFooter}>
