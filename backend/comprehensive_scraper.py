@@ -437,58 +437,70 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_ausschreibungen_deutschland(self) -> list:
-        """Scrape ausschreibungen-deutschland.de"""
+        """Scrape ausschreibungen-deutschland.de - All German States"""
         tenders = []
+        
+        # Main page and state-specific pages
         urls = [
             "https://ausschreibungen-deutschland.de/",
-            "https://ausschreibungen-deutschland.de/ausschreibungen",
-            "https://ausschreibungen-deutschland.de/bauleistungen",
-            "https://ausschreibungen-deutschland.de/dienstleistungen"
+            "https://ausschreibungen-deutschland.de/Baden-Wuerttemberg",
+            "https://ausschreibungen-deutschland.de/Bayern",
+            "https://ausschreibungen-deutschland.de/Berlin",
+            "https://ausschreibungen-deutschland.de/Brandenburg",
+            "https://ausschreibungen-deutschland.de/Hamburg",
+            "https://ausschreibungen-deutschland.de/Hessen",
+            "https://ausschreibungen-deutschland.de/Niedersachsen",
+            "https://ausschreibungen-deutschland.de/Nordrhein-Westfalen",
+            "https://ausschreibungen-deutschland.de/Sachsen",
         ]
         
         for url in urls:
             html = await self.fetch_page(url)
             if html:
                 soup = BeautifulSoup(html, 'lxml')
-                items = soup.select('.tender-item, article, .publication, table tr, .ausschreibung, .search-result, a[href*="ausschreibung"]')
+                
+                # Find all tender links - they have specific URL pattern
+                all_links = soup.select('a[href*="/2"]')  # Tender IDs start with 2
+                items = []
+                
+                for link in all_links:
+                    href = link.get('href', '')
+                    if href and '/2' in href and 'Deutschland' in href:
+                        items.append(link)
+                
                 logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} items")
                 
-                for item in items:
-                    title_elem = item.select_one('a, h2, h3, .title, .ausschreibung-title')
-                    if title_elem:
-                        title = title_elem.get_text(strip=True)
-                        if len(title) > 15 and self.is_relevant_tender(title):
-                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
-                            if link and not link.startswith('http'):
-                                link = f"https://ausschreibungen-deutschland.de{link}"
-                            
-                            # Try to get more details
-                            desc_elem = item.select_one('.description, .text, p')
-                            description = desc_elem.get_text(strip=True) if desc_elem else ""
-                            
-                            location_elem = item.select_one('.location, .ort')
-                            location = location_elem.get_text(strip=True) if location_elem else "Deutschland"
-                            
-                            cat_info = self.categorize_tender(title, description)
-                            budget = self.extract_budget(f"{title} {description}")
-                            
-                            tenders.append({
-                                'title': title,
-                                'description': description or f"Ausschreibung: {title}",
-                                'budget': budget,
-                                'deadline': self.extract_deadline(f"{title} {description}"),
-                                'location': location,
-                                'project_type': 'Public Tender',
-                                'contracting_authority': 'Öffentlicher Auftraggeber',
-                                'category': cat_info['category'] or 'Projektmanagement',
-                                'building_typology': cat_info['building_typology'],
-                                'platform_source': 'Ausschreibungen Deutschland',
-                                'platform_url': 'https://ausschreibungen-deutschland.de/',
-                                'direct_link': link,
-                                'country': 'Germany',
-                            })
+                for item in items[:20]:  # Limit per page
+                    title = item.get_text(strip=True)
+                    if len(title) > 20 and self.is_relevant_tender(title):
+                        link_href = item.get('href', '')
+                        if link_href and not link_href.startswith('http'):
+                            link_href = f"https://ausschreibungen-deutschland.de{link_href}"
+                        
+                        # Extract location from title or URL
+                        location_match = re.search(r'_(\d{4})_([^/]+)$', link_href)
+                        location = location_match.group(2).replace('_', ' ') if location_match else 'Deutschland'
+                        
+                        cat_info = self.categorize_tender(title)
+                        budget = self.extract_budget(title)
+                        
+                        tenders.append({
+                            'title': title[:200],  # Truncate long titles
+                            'description': f"Öffentliche Ausschreibung: {title[:150]}",
+                            'budget': budget,
+                            'deadline': self.extract_deadline(title),
+                            'location': location,
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Ausschreibungen Deutschland',
+                            'platform_url': 'https://ausschreibungen-deutschland.de/',
+                            'direct_link': link_href,
+                            'country': 'Germany',
+                        })
             
-            await asyncio.sleep(0.5)  # Rate limiting
+            await asyncio.sleep(0.3)  # Rate limiting
         
         return tenders
 
