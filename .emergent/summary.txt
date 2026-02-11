@@ -1,206 +1,181 @@
 <analysis>
 <original_problem_statement>
-The user wants to build a mobile app for their company to track tender updates from German construction tender platforms.
+The user wants to build a mobile app, GroVELLOWS, for their company to track tender updates from German and Swiss construction tender platforms.
 
-**Initial Core Requirements:**
-- **App Name:** GroVELLOWS
-- **Platform:** Mobile app (Expo React Native)
-- **Theme:** Primary color:  (Navy Blue), Secondary color:  (Gold). Font: Avenir Next LT Pro (or a close system equivalent).
+**Core Requirements:**
 - **Functionality:**
-    - Track tenders from public and private German platforms.
-    - Display detailed tender information: title, description, budget, deadline, location, project type, authority, participants, contact details.
-    - Data to be gathered via web scraping (currently using seeded data as a placeholder).
-    - Updates should be daily.
-    - Push notifications for new tenders.
+    - Track tenders from public and private German & Swiss platforms via live web scraping. The user has provided a PDF with a list of required platforms.
+    - Focus scraping on specific construction services: Project management office, Wettbewerbsbegleitung, Finanzcontrolling, Agiles Projektmanagement, Projekt Coaching, Nutzermanagement, Krisenmanagement, Vertragsmanagement, Risikomanagement, and Integrierte Projektabwicklung.
+    - Display detailed, authentic tender information, including budget where available. Tender titles must be genuine and not auto-generated.
+    - All data (Tenders, News, Developer Projects) must be authentic.
+    - Implement push notifications for new, relevant tenders, similar to a WhatsApp message.
+- **App Name:** GroVELLOWS
+- **Theme:** Primary color:  (Navy Blue), Secondary color:  (Gold).
+- **Authentication:** Role-based login (Director, Partner, Project Manager). Partners should be able to share tenders with other Partners.
+- **Bilingual Support:** UI must support German and English.
+- **Security:** The application must have a firewall to protect user and company data. The user also requested a summary of potential data breach risks.
+- **Collaboration & Tracking:**
+    - A Share feature.
+    - A Claim feature to mark a tender as being worked on.
+    - A tender-specific chat area.
+- **Application Links:** The Apply link for a tender should lead to the specific tender description page on the source portal, not just the portal's homepage. This should be achieved by generating a search URL with the tender's title.
 
-**Added Features during Development:**
-- **Authentication:** Email/password-based login with role management for: Project Managers, Senior Project Managers, Interns, HR, Partners, and Directors.
-- **Collaboration:** Favorites tab, sharing functionality.
-- **Document Management:** Form-based PDF export/editing.
-- **Status Tracking:** Track tender status from New to In Progress to Closed.
-- **Advanced Filters:** Filter by IPA/integrierte projektabwicklung/Integrated Project management/IPD.
-- **LinkedIn Integration:** Initially requested API, but settled for manual input of LinkedIn profile links to show connections related to a project.
-- **GDPR Compliance:** A consent screen for German data privacy laws (DSGVO).
-- **Bilingual Support:** The UI must support both German and English.
-- **Market Intelligence:**
-    - A News section for updates on the German construction market, especially focusing on stuck or underperforming projects.
-    - A Developer Projects section to track new and ongoing projects from major German developers, including timelines.
-- **Admin Panel:** A secure area, accessible only by the 'Director' role, to add, change, or remove tender portal links.
-- **Expanded Categories:** The app must categorize tenders by new service areas (Risk management, Lean management, etc.) and building typologies (Data center, residential, commercial, mixed-use, etc.).
-- **Application Tracking:**
-    - A checkbox on tenders to mark them as Applied.
-    - A system to track the status of applied tenders until the results are announced.
-- **Notification Deduplication:** Send only one notification for the same tender even if it appears on multiple platforms.
-- **SharePoint Integration:** A feature to merge/sync with a company SharePoint folder system (currently using a placeholder URL).
 </original_problem_statement>
 
-**User's preferred language**: The user communicates in English, but requested the application to be bilingual (English and German). The next agent should continue to communicate in English while ensuring both language options in the app are maintained.
+**User's preferred language**: English. The next agent must respond in English.
 
 **what currently exists?**
-A full-stack Expo (React Native) and FastAPI application named GroVELLOWS.
-- **Frontend:** A 5-tab mobile application (Tenders, News, Developer Projects, Favorites, Profile). It includes user authentication (Login/Register), a GDPR consent screen, bilingual (EN/DE) support with a language switcher in the profile, and a refined, professional UI.
-- **Backend:** A FastAPI server with MongoDB. It has endpoints for user registration, login, and GDPR consent. It serves data for tenders, news articles, and developer projects.
-- **Data:** The application currently runs on extensive **seeded data** for tenders, news, projects, and users. The web scraping functionality is not yet implemented.
-- **Admin Functionality:** A role-based access control system is in place. Users with the Director role can access an Admin screen (via the Profile tab) to manage a list of tender portal URLs (CRUD operations).
+A full-stack Expo (React Native) and FastAPI application.
+- **Frontend:** A 5-tab mobile application with a completely redesigned and functional tender list screen () that displays tenders in a professional card format. The UI includes various category and typology badges. The tender detail page () shows detailed information and includes a new Links section with a direct search-based application URL. The frontend has the necessary components for new category filters as requested by the user. The infrastructure for push notifications (, ) has been added but is not yet fully integrated.
+- **Backend:** A FastAPI server connected to MongoDB. It features a new  that scrapes **real, authentic tender data** from several German platforms. The scraper has been refined to focus on specific construction management categories. All fake/sample data has been purged. Basic security middleware has been added to . The backend includes endpoints for registering push notification tokens and logic to send notifications when new tenders are found.
 
 **Last working item**:
-- Last item agent was working: The agent was in the initial stages of implementing a large set of new features requested by the user. It started by modifying the backend  file to expand the data models. Specifically, it added  and  enums and updated the  Pydantic model to include fields for  and .
-- Status: IN PROGRESS
+- Last item agent was working: The agent was attempting to implement the web scraping logic for the Swiss tender platform, ****. The user explicitly asked why no tenders from this platform were appearing.
+- Status: **IN PROGRESS**
 - Agent Testing Done: N
-- Which testing method agent to use? both
+- Which testing method agent to use? After implementing the scraper, the **backend testing agent** should be used to verify that it correctly fetches and parses data from .
 - User Testing Done: N
 
 **All Pending/In progress Issue list**:
--   **Issue 1:** The backend was left in a syntactically inconsistent state due to repeated, lengthy  operations that failed. This caused an . Although the agent fixed it, the process was fragile. The next agent must be careful when making large edits to .
-    -   **Attempted fixes:** The agent used  and  multiple times to debug and correct indentation and remove duplicated code blocks.
-    -   **Next debug checklist:** Before running, verify the syntax of  using .
-    -   **Why fix this issue and what will be achieved with the fix?** This is a recurring problem due to the agent's method of editing large files. A more robust editing strategy is needed to prevent wasting time on syntax errors.
-    -   **Status:** RESOLVED (but high risk of recurrence)
-    -   **Is recurring issue?** Y
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on other issue:** None
+-   **Issue 1: Scraper for  (Switzerland) is not implemented (P0 - CRITICAL)**
+
+  **Issues Detail:**
+  - **Issue 1: Scraper for  (Switzerland) is not implemented (P0 - CRITICAL)**
+     - **Description**: The user requested the addition of the Swiss tender platform . The agent added it to the configuration but failed to implement the actual scraping logic. The user has noticed the absence of Swiss tenders.
+     - **Attempted fixes**: The agent discovered that  is a modern JavaScript-rendered application, so simple HTTP requests with BeautifulSoup are ineffective. The agent was about to investigate an API or RSS feed approach.
+     - **Next debug checklist**:
+        1. Open  in a web browser and use the browser's developer tools.
+        2. Navigate to the search results page and monitor the Network tab.
+        3. Identify the API request the frontend makes to fetch the tender data (look for XHR/Fetch requests returning JSON).
+        4. Analyze the API request's URL, headers, and payload to understand how to replicate it.
+        5. Update the  function in  to make a request to this API endpoint.
+        6. Parse the JSON response to extract tender details (title, description, URL, etc.).
+        7. If an API is not found, search the website for an RSS feed as a fallback.
+     - **Why fix this issue and what will be achieved with the fix?** This is a direct user request and a blocker for completing the data acquisition feature set. Fixing it will add Swiss tenders to the app, fulfilling a key requirement.
+     - **Status**: IN PROGRESS
+     - **Is recurring issue?** N
+     - **Should Test frontend/backend/both after fix?** backend
+     - **Blocked on other issue:** None.
 
 **In progress Task List**:
--   **Task 1:** Complete Backend Implementation for New Features (P0)
-    -   **Where to resume:** The agent has already updated the Pydantic models in . The next steps are:
-        1.  Create new API endpoints for application tracking (e.g., ).
-        2.  Update the existing  endpoint to allow filtering by the new  categories.
-        3.  Implement the notification de-duplication logic.
-        4.  Integrate the new hospital portal links (from the DOCX file) into the seed data and portal management system.
-        5.  Update the seed data script to include the new building typologies and application statuses for sample tenders.
-    -   **What will be achieved with this?** The backend will support all the newly requested features, including application tracking, advanced categorization, and data for hospital tenders.
-    -   **Status:** IN PROGRESS
-    -   **Should Test frontend/backend/both after fix?** backend
-    -   **Blocked on something:** None
+  - **Task 1: Complete Push Notification Implementation (P1)**
+     - **Description**: The backend infrastructure for push notifications is in place (token registration, sending logic). However, the frontend is not yet configured to request notification permissions, obtain the device token, and send it to the backend.
+     - **Where to resume**:
+        1. In  or a similar top-level component, call the functions from .
+        2. Use a  hook to register for push notifications when the app starts and the user is logged in.
+        3. Send the obtained Expo Push Token to the  backend endpoint.
+        4. Implement logic to handle receiving a notification while the app is open, backgrounded, or closed.
+     - **What will be achieved with this?** Users will receive real-time notifications on their devices when new tenders matching their criteria are found, a critical feature requested by the user.
+     - **Status**: IN PROGRESS
+     - **Should Test frontend/backend/both after fix?** both
+     - **Blocked on something:** None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks:**
-    - **P0: Frontend UI for New Features:**
-        - **Tender Screen ():**
-            - Add a checkbox or button to each tender card to Mark as Applied.
-            - Update the filter modal to include the new  categories.
-        - **New My Applications Screen/Tab:** Create a new screen to display tenders the user has applied for, categorized by status (e.g., Applied, Awaiting Results, Won, Lost).
-        - **LinkedIn Integration UI ():** Add a section in the tender detail view for users to manually input LinkedIn profile URLs of project contacts and view them.
-        - **News and Projects UI (, ):** Enhance these screens to highlight connections from the user's network for stuck projects.
-        - **Klinikums Ausschreibungen Section:** Add a dedicated section or filter for hospital tenders.
+    - **P1: Full Scraper Coverage for All German Portals**: The  has been created, but logs showed that many configured portals (e.g., HAD Hessen, Baden-Württemberg) returned 0 items. Each of these needs to be individually investigated and its scraping logic properly implemented, likely requiring API inspection similar to the  task.
+    - **P1: Implement Tender Detail Page UI (Chat & Claim)**: The backend endpoints for Claim () and Chat () are ready, but the frontend UI in  has not been built. This is a core collaboration feature from the original request that has not been addressed.
 - **Future Tasks:**
-    - **P1: Implement Live Web Scraping:** This was part of the original plan (Phase 5) but has been deferred. The current app uses static seed data. This task involves building Python scrapers (e.g., using BeautifulSoup/Scrapy) for the specified tender portals and scheduling them to run daily.
-    - **P1: Implement Push Notifications:** Set up a push notification service (like Expo Push Notifications) to alert users of new tenders based on their preferences.
-    - **P2: SharePoint Integration:** Implement the connection to the company's SharePoint. This will require obtaining real credentials from the user and using an appropriate library (e.g., Microsoft Graph API) to create and manage folders.
+    - **P2: Ensure Authenticity for News & Developer Projects**: The user has a strong preference for authentic data. The agent has focused on tenders, but the News and Developer Projects sections are likely using outdated or mock data. The scrapers () and data for these sections need a complete overhaul to provide real, relevant information.
 
 **Completed work in this session**
-- **User Authentication & Roles:** Implemented a complete email/password authentication system with 6 distinct user roles.
-- **Admin Panel:** Created a secure admin panel accessible only to the 'Director' role for managing tender portal URLs.
-- **Branding & Theming:** Branded the app as GroVELLOWS with a custom navy blue/gold color scheme and Avenir-like fonts.
-- **Core UI & Navigation:** Built a 5-tab mobile app structure using Expo Router (, , , , ).
-- **Bilingual Support (DE/EN):** Integrated  for full German and English translations, with a language switcher on the profile screen.
-- **GDPR Compliance:** Added a GDPR (DSGVO) consent screen and logic into the registration flow.
-- **Expanded Data Models:** Added backend models and API endpoints for News and Developer Projects.
-- **Refined UI:** Redesigned the main tender list for a cleaner, more professional enterprise look with better controls (search and filter).
+- **UI/UX Overhaul:**
+  - Fixed a critical syntax error in , making the app usable again.
+  - Completely redesigned the tender card UI to be professional and data-rich, matching the user's visual reference.
+  - Implemented dynamic, colored badges for Building Typology (e.g., Healthcare, Infrastructure) and Category (e.g., Risikomanagement).
+- **Data Authenticity and Scraping:**
+  - **Pivoted from mock data to 100% authentic data.** Purged all fake tenders, news, and projects from the database.
+  - Created a new  and successfully scraped real tenders from several German platforms (e.g., Vergabe Bayern, Berlin).
+  - Refined scraper's categorization logic to focus on specific construction management services requested by the user.
+  - Updated scraper to generate direct search-based application URLs for each tender, fulfilling a key UX request.
+  - Added numerous tender platforms from a user-provided PDF to the scraper's configuration.
+- **Feature Implementation:**
+  - Added new category filters to the frontend UI ().
+  - Implemented a warning banner on the tender detail page () for tenders that lack a direct application link.
+  - Implemented basic backend security (rate limiting, security headers) via a new  middleware.
+  - Created the backend infrastructure for push notifications, including endpoints to register tokens and logic to send notifications upon finding new tenders.
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1: Expo Go Version Mismatch**
-    - The user reported being unable to run the app on their phone due to a version problem. The agent correctly identified this as an incompatibility between the project's Expo SDK version and the user's Expo Go app version.
-    - **Why to solve this issue and what will be achieved with this?** This is not a code bug but a user-environment issue. The agent has already provided the user with correct workarounds (use web preview, update Expo Go). No code fix is required, but the next agent should be aware of this and remind the user if it comes up again.
-    - **Is recurring issue?** Y (if user doesn't update their client)
+-   **Issue 1: Chat and Claim UI on Tender Detail Page**: This was part of the original problem statement. While the backend endpoints exist, the frontend UI in  to Claim a tender or use the tender-specific Chat has not been built.
 
 **Known issue recurrence from previous fork**
--   None explicitly mentioned, but the pattern of large, fragile edits to  is a high-risk behavior that recurred within this session.
+- **Fragile File Editing**: The previous agent had a tendency to break files with large  commands. While the current agent successfully used this method, it's a high-risk approach. The next agent should continue to be cautious and prefer smaller, targeted edits.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend:** Expo (React Native), Expo Router (file-based routing), React Context API (for Auth),  (for localization).
-- **Backend:** FastAPI, Pydantic (for data modeling), Motor (for async MongoDB access), JWT (for token-based authentication).
-- **Database:** MongoDB.
-- **Architecture:** Full-stack monorepo with a clear separation between the  and  services.
+- **Frontend:** Expo (React Native), Expo Router, React Context API, , .
+- **Backend:** FastAPI, Pydantic, Motor (async MongoDB), JWT, .
+- **Data Scraping:** , . **Crucially, the project now relies on scraping real websites, some of which are JS-rendered and require API inspection.**
+- **Security:** Basic security middleware for headers and rate limiting.
 
 **key DB schema**
--   : { , ,  (enum),  (bool),  (str, optional) }
--   : { , , , , , ,  (enum),  (str),  (enum),  (enum),  ([user_id]),  }
--   : { , , , , ,  }
--   : { , , , ,  { ,  },  }
--   : { , ,  }
+- : { , , , : [string] }
+- : { , , , , ,  }
+- : { , , ,  }
+- : { , , ,  }
 
 **changes in tech stack**
-- No major changes to the core stack (Expo/FastAPI/Mongo).
-- Added  for internationalization.
-- Added  for future web scraping.
+-  was added to the frontend for push notifications.
+- The scraping strategy has evolved from simple HTML parsing to requiring inspection of site-specific APIs for JS-heavy platforms.
 
 **All files of reference**
--   : The heart of the backend. Contains all logic, models, and API routes. It was heavily modified and is the starting point for the next set of tasks.
--   : Defines the 5-tab navigation structure.
--   : The main tender list screen. Needs updates for new features.
--   : Tender detail screen. Needs updates for application tracking and LinkedIn features.
--   : Manages user state, including role, which is critical for admin access.
--    & : Translation files that will need to be updated with new strings for the upcoming features.
--   : The UI for the admin panel.
--   : A user-facing document on how to export and self-host the app.
--   : The main project README.
-
-**Areas that need refactoring**:
--    is becoming a monolith. At over 1200 lines, it's difficult to manage. Future work should consider splitting the logic into multiple files using FastAPI's  for better organization (e.g., , ).
-
-**key api endpoints**
--    (POST): Create a new user.
--    (POST): Authenticate a user and get a JWT token.
--    (GET): Fetch all tenders.
--    (GET): Fetch news articles.
--    (GET): Fetch developer projects.
--    (GET, POST, PUT, DELETE): CRUD operations for tender portal links (Admin only).
--    (GET): Populates the database with extensive sample data.
+- : **CRITICAL.** The main scraper that needs to be updated with the  logic and other missing platforms.
+- : The main server file. It was heavily modified to include security middleware, push notification endpoints, and calls to the new scraper.
+- : The main tender list. It was completely rewritten to implement the new UI and filters.
+- : The tender detail page. It needs to be updated with the Chat/Claim UI.
+- : Needs to be updated to integrate the push notification service.
+- : The scaffold for frontend push notification logic.
 
 **Critical Info for New Agent**
--   **Work is mid-feature:** You are picking up in the middle of a large feature implementation. The backend models have been changed, but the APIs and frontend are not updated. Your first priority is to complete this task.
--   **Data is Seeded:** The app does NOT use live data. All tenders, news, etc., come from the  endpoint. The web scraping feature is a future task.
--   **Admin Role:** The Director role has special privileges to access the admin panel. Use a user with this role for testing admin features. The seed data likely creates such a user.
--   **Manual LinkedIn:** The LinkedIn integration is manual. The plan is to provide a text input for users to save profile URLs, not to use the LinkedIn API.
--   **File Editing:** Be extremely cautious when making large edits to . The previous agent struggled with . Use  to check syntax frequently. Consider smaller, more targeted edits.
+- **Data Authenticity is the #1 Priority:** The user has rejected mock/sample data. All data shown in the app must be from real, scraped sources. Do not add any more sample data.
+- **Scraping is Hard:** Your immediate task is to scrape . It's a modern React app. You **must** use browser developer tools to find its internal API and scrape that. This approach will likely be needed for other non-functional scrapers as well.
+- **Push Notifications are Half-Done:** The backend is ready to send notifications, but the frontend client needs to be implemented to ask for permission and register the device token. This is your next task after fixing the scraper.
+- **Don't Forget Old Features:** The Claim and Chat features have been on the backlog for a long time. Once the critical scraping and notification tasks are done, this should be addressed.
 
 **documents created in this job**
--   
--    (overwritten)
--   
--   
--   
--   
--   Numerous frontend screen files for tabs, auth, and details.
+- 
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **#216:** User provides a DOCX with hospital tender links, specifies building typology categories, confirms manual LinkedIn input, and gives a placeholder for SharePoint URL. **Status: IN PROGRESS**.
-2.  **#215:** Agent asks for clarification on new feature requests (hospital links, SharePoint, etc.). **Status: Addressed by user**.
-3.  **#214:** User requests a massive list of new features: hospital tenders, notification de-duplication, SharePoint sync, building typology categories, application tracking, and enhanced LinkedIn/news integration. **Status: IN PROGRESS**.
-4.  **#213:** Agent explains the version problem with Expo Go and offers solutions. **Status: Addressed by agent**.
-5.  **#212:** User reports version problem on phone and asks for no credit deduction. **Status: Addressed by agent**.
-6.  **#211:** Agent summarizes the implementation of the Admin Panel. **Status: Completed**.
-7.  **#197:** User requests an admin panel to manage tender portal links, restricted to one person. **Status: Completed**.
-8.  **#190:** User asks for a cleaner, more accessible interface. **Status: Completed**.
-9.  **#171:** User asks the agent to proceed with the next step (implementing UI for News/Projects). **Status: Completed**.
-10. **#138:** User requests to add developer portals, news on stuck projects, and expanded tender categories. **Status: Completed**.
+1.  **#355**: User asks why they cannot see any tenders from . **Status: NOT ADDRESSED (This is the current P0 issue).**
+2.  **#314**: User requests adding , implementing a firewall, a data breach risk summary, and push notifications. **Status: PARTIALLY IMPLEMENTED.**
+3.  **#297**: User requests the scraper to cover all shared portals, filter by company services, and extract project costs. **Status: PARTIALLY IMPLEMENTED.**
+4.  **#268**: User requests filter changes, enables Partner-to-Partner sharing, and **critically requests using only authentic data**, rejecting the fake projects. **Status: ADDRESSED.**
+5.  **#249**: User provides a PDF of tender platforms and asks to ensure all are included. **Status: ADDRESSED.**
+6.  **#221**: User requests scraper to refocus on specific project management categories and add corresponding filters. **Status: ADDRESSED.**
+7.  **#210**: User provides a corrected URL for the Hamburg tender portal. **Status: ADDRESSED.**
+8.  **#181**: User points out inconsistent UI, incorrect application links, and irrelevant tenders. **Status: ADDRESSED.**
+9.  **#97**: User requests a direct application link for tenders. **Status: ADDRESSED.**
+10. **#5**: User confirms the plan to fix the UI, add users, and implement the new design. **Status: ADDRESSED.**
 
 **Project Health Check:**
--   **Broken:** The application might not run correctly as the backend models were changed () but the corresponding APIs and frontend were not updated. Restarting services will likely lead to errors.
--   **Mocked:** The entire data layer is mocked via a large seed data script. There is no live data from web scraping. SharePoint integration is also using a placeholder.
+- **Broken:** The  scraper is non-existent, making a key feature appear broken to the user. Many other configured scrapers are also non-functional.
+- **Mocked:** All mock/fake data has been successfully purged. The application now relies 100% on live (but incomplete) scraped data.
 
 **3rd Party Integrations**
-- No external APIs are actively being called yet. The following are planned or have libraries installed:
-    - **BeautifulSoup4**: Installed for future web scraping.
-    - **i18n-js**: Installed and configured for internationalization.
+- **BeautifulSoup4 / aiohttp**: Used for web scraping. Effectiveness is limited to static HTML sites.
+- **APScheduler**: Used for scheduling background scraping jobs.
+- **Expo Notifications**: Used for handling push notifications.
 
 **Testing status**
--   **Testing agent used after significant changes:** NO
--   **Troubleshoot agent used after agent stuck in loop:** NO (but should have been considered for the  issues).
--   **Test files created:** None.
--   **Known regressions:** The app is likely in a non-working state due to the incomplete implementation of new features.
+- **Testing agent used after significant changes:** NO (Agent relied on manual screenshot testing).
+- **Troubleshoot agent used after agent stuck in loop:** NO.
+- **Test files created:** None.
+- **Known regressions:** None. The app is in a much better state than at the start of the session.
 
 **Credentials to test flow:**
--   **Email:** 
--   **Password:** 
-- To test admin features, register a new user and select the Director role.
+- **Director:**  / 
+- **Partner:**  / 
+- **Project Manager:**  / 
+- **Senior PM:**  / 
 
 **What agent forgot to execute**
--   The agent did not create any automated tests (e.g., using pytest for the backend).
--   The agent did not fully implement the form-based editable PDF feature; it was mentioned in the plan but not built.
--   The agent struggled with large file edits, leading to syntax errors, and did not call the  as per the system prompt's rules (e.g., after 3 consecutive failed attempts).
+- The full implementation of the  scraper.
+- The implementation of scrapers for several other German portals that currently return zero results.
+- The frontend UI for the Claim and Chat features on the tender detail page.
+- The frontend integration for push notifications (requesting permission and registering the token).
+- A review of the News and Developer Projects sections to ensure data authenticity.
+- Keep everything else as shown in the app as it is. Add the updates what agent forgot to execute.
 </analysis>

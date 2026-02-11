@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://constructbid-6.preview.emergentagent.com/api"
+BASE_URL = "https://buildsource-3.preview.emergentagent.com/api"
 
 # Test credentials from review request
 DIRECTOR_CREDENTIALS = {
