@@ -26,7 +26,7 @@ SECURITY_CONFIG = {
     "max_request_size": 10 * 1024 * 1024,  # 10MB max request size
     "blocked_ips": set(),
     "allowed_origins": [
-        "https://buildsource-3.preview.emergentagent.com",
+        "https://project-pulse-251.preview.emergentagent.com",
         "http://localhost:3000",
         "http://localhost:8001",
         "exp://",  # Expo Go
