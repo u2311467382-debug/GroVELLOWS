@@ -66,6 +66,8 @@ const CATEGORIES = [
   'Bauüberwachung',
   'Kostenmanagement',
   'Projektmanagement',
+  'Projektsteuerung',
+  'Projektcontrolling',
   'Beschaffungsmanagement',
   'General'
 ];
@@ -74,6 +76,8 @@ const BUILDING_TYPOLOGIES = [
   'All', 'Healthcare', 'Data Center', 'Residential', 'Commercial', 
   'Mixed-Use', 'Industrial', 'Infrastructure', 'Education', 'Sports', 'Hospitality'
 ];
+
+const COUNTRIES = ['All', 'Germany', 'Switzerland'];
 
 const STATUSES = ['All', 'New', 'In Progress', 'Closed'];
 const SORT_OPTIONS = [
