@@ -1129,6 +1129,519 @@ class ComprehensiveScraper:
         
         return tenders
 
+    # ==================== ADDITIONAL GERMAN PLATFORMS (USER REQUESTED) ====================
+
+    async def scrape_tender_impulse(self) -> list:
+        """Scrape Tender Impulse - Germany Tenders Public Projects"""
+        tenders = []
+        urls = [
+            "https://www.tenderimpulse.com/germany-tenders",
+            "https://www.tenderimpulse.com/germany-public-projects"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.tender-item, .project-item, article, table tr, .search-result, .card')
+                logger.info(f"Tender Impulse ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, h2, h3, .title, .tender-title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"https://www.tenderimpulse.com{link}"
+                            
+                            desc_elem = item.select_one('.description, p, .summary')
+                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            cat_info = self.categorize_tender(title, description)
+                            budget = self.extract_budget(f"{title} {description}")
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': description or f"Tender Impulse: {title}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'location': 'Deutschland',
+                                'project_type': 'Public Project',
+                                'contracting_authority': 'Public Authority Germany',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Tender Impulse',
+                                'platform_url': 'https://www.tenderimpulse.com',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
+        
+        return tenders
+
+    async def scrape_vergabe24(self) -> list:
+        """Scrape vergabe24.de"""
+        tenders = []
+        url = "https://www.vergabe24.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, .vergabe-item, article, table tr, .search-result, .ausschreibung')
+            logger.info(f"vergabe24.de: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.vergabe24.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"vergabe24 Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'vergabe24',
+                            'platform_url': 'https://www.vergabe24.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_dtad(self) -> list:
+        """Scrape dtad.de - Deutscher Tender-Ausschreibungsdienst"""
+        tenders = []
+        url = "https://www.dtad.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, .ausschreibung, article, table tr, .search-result, .project-card')
+            logger.info(f"DTAD: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title, .tender-title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.dtad.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"DTAD Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'DTAD',
+                            'platform_url': 'https://www.dtad.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_cwc_tenders(self) -> list:
+        """Scrape CWC Tenders Germany"""
+        tenders = []
+        url = "https://www.cwctenders.com/de/index.php"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, table tr, .search-result, .tender-row')
+            logger.info(f"CWC Tenders: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.cwctenders.com{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"CWC Tender: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Public Authority',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'CWC Tenders',
+                            'platform_url': 'https://www.cwctenders.com',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_bidding_source(self) -> list:
+        """Scrape BiddingSource Germany"""
+        tenders = []
+        url = "https://www.biddingsource.com/tenders/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, table tr, .search-result, .card, .tender-card')
+            logger.info(f"BiddingSource: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title, .tender-title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.biddingsource.com{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"BiddingSource: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Public Authority',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'BiddingSource',
+                            'platform_url': 'https://www.biddingsource.com',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_a24_salescloud(self) -> list:
+        """Scrape A24 Sales Cloud"""
+        tenders = []
+        url = "https://a24salescloud.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, table tr, .search-result, .project-card, .ausschreibung')
+            logger.info(f"A24 Sales Cloud: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://a24salescloud.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"A24 Sales Cloud: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Öffentlicher Auftraggeber',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'A24 Sales Cloud',
+                            'platform_url': 'https://a24salescloud.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_berlin_procurement(self) -> list:
+        """Scrape Berlin Procurement Cooperation platforms"""
+        tenders = []
+        urls = [
+            "https://my.vergabeplattform.berlin.de/",
+            "https://www.berlin.de/vergabeplattform/"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.tender-item, article, table tr, .search-result, .vergabe-item, .modul-teaser')
+                logger.info(f"Berlin Procurement ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, h2, h3, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"https://www.berlin.de{link}"
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"Berlin Procurement: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Berlin',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Land Berlin',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Berlin Procurement Cooperation',
+                                'platform_url': url,
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
+        
+        return tenders
+
+    async def scrape_lzbw(self) -> list:
+        """Scrape LZBW - Logistikzentrum Baden-Württemberg"""
+        tenders = []
+        url = "https://www.lzbw.de/ausschreibungen"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, table tr, .search-result, .ausschreibung, .content-item')
+            logger.info(f"LZBW: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.lzbw.de{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"LZBW Ausschreibung: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Baden-Württemberg',
+                            'project_type': 'State Tender',
+                            'contracting_authority': 'Logistikzentrum Baden-Württemberg',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'LZBW',
+                            'platform_url': 'https://www.lzbw.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_de_baunetzwerk(self) -> list:
+        """Scrape D&E BauNetzwerk"""
+        tenders = []
+        url = "https://www.de-baunetzwerk.de/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, .project-item, article, table tr, .search-result, .bauvorhaben')
+            logger.info(f"D&E BauNetzwerk: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title, .project-title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.de-baunetzwerk.de{link}"
+                        
+                        desc_elem = item.select_one('.description, p, .summary')
+                        description = desc_elem.get_text(strip=True) if desc_elem else ""
+                        
+                        cat_info = self.categorize_tender(title, description)
+                        budget = self.extract_budget(f"{title} {description}")
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': description or f"D&E BauNetzwerk: {title}",
+                            'budget': budget,
+                            'deadline': self.extract_deadline(f"{title} {description}"),
+                            'location': 'Deutschland',
+                            'project_type': 'Construction Project',
+                            'contracting_authority': 'Bauherr',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'D&E BauNetzwerk',
+                            'platform_url': 'https://www.de-baunetzwerk.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_global_tenders_germany(self) -> list:
+        """Scrape Global Tenders - Germany section"""
+        tenders = []
+        url = "https://www.globaltenders.com/tenders-by-country/germany-tenders/"
+        
+        html = await self.fetch_page(url)
+        if html:
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.tender-item, article, table tr, .search-result, .tender-row, .card')
+            logger.info(f"Global Tenders Germany: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('a, h2, h3, .title, .tender-title')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                        if link and not link.startswith('http'):
+                            link = f"https://www.globaltenders.com{link}"
+                        
+                        cat_info = self.categorize_tender(title)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': f"Global Tenders: {title}",
+                            'budget': None,
+                            'deadline': datetime.utcnow() + timedelta(days=30),
+                            'location': 'Deutschland',
+                            'project_type': 'Public Tender',
+                            'contracting_authority': 'Public Authority Germany',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Global Tenders Germany',
+                            'platform_url': 'https://www.globaltenders.com',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
+        
+        return tenders
+
+    async def scrape_aumass(self) -> list:
+        """Scrape AUMASS Ausschreibungen"""
+        tenders = []
+        urls = [
+            "https://www.aumass.de/ausschreibungen/",
+            "https://www.aumass.de/ausschreibungen/brandenburg"
+        ]
+        
+        for url in urls:
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('.tender-item, article, table tr, .search-result, .ausschreibung-item')
+                logger.info(f"AUMASS ({url}): Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, h2, h3, .title')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"https://www.aumass.de{link}"
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"AUMASS Ausschreibung: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Deutschland',
+                                'project_type': 'Public Tender',
+                                'contracting_authority': 'Öffentlicher Auftraggeber',
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'AUMASS',
+                                'platform_url': 'https://www.aumass.de',
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
+        
+        return tenders
+
+    async def scrape_additional_hospitals(self) -> list:
+        """Scrape additional hospital platforms from user's list"""
+        tenders = []
+        additional_hospital_urls = {
+            'Ammerland Klinik': 'https://www.ammerland-klinik.de/ausschreibungen',
+        }
+        
+        for hospital, url in additional_hospital_urls.items():
+            html = await self.fetch_page(url)
+            if html:
+                soup = BeautifulSoup(html, 'lxml')
+                items = soup.select('table tr, .tender-item, article, .ausschreibung, .search-result')
+                logger.info(f"{hospital}: Found {len(items)} items")
+                
+                for item in items:
+                    title_elem = item.select_one('a, .title, h2, h3')
+                    if title_elem:
+                        title = title_elem.get_text(strip=True)
+                        if len(title) > 15 and self.is_relevant_tender(title):
+                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
+                            if link and not link.startswith('http'):
+                                link = f"{url.rstrip('/')}/{link.lstrip('/')}"
+                            
+                            cat_info = self.categorize_tender(title)
+                            
+                            tenders.append({
+                                'title': title,
+                                'description': f"{hospital} Ausschreibung: {title}",
+                                'budget': None,
+                                'deadline': datetime.utcnow() + timedelta(days=30),
+                                'location': 'Deutschland',
+                                'project_type': 'Hospital Tender',
+                                'contracting_authority': hospital,
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': 'Healthcare',
+                                'platform_source': hospital,
+                                'platform_url': url,
+                                'direct_link': link,
+                                'country': 'Germany',
+                            })
+            
+            await asyncio.sleep(0.5)
+        
+        return tenders
+
     # ==================== SWISS PLATFORM ====================
 
     async def scrape_simap_switzerland(self) -> list:
