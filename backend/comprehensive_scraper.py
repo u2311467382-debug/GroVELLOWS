@@ -32,7 +32,9 @@ SERVICE_KEYWORDS = {
     'Lean Management': ['lean', 'lean construction', 'lean management', 'prozessoptimierung'],
     'Bauüberwachung': ['bauüberwachung', 'bauleitung', 'bauaufsicht', 'baubegleitung', 'objektüberwachung', 'bauoberleitung'],
     'Kostenmanagement': ['kostenmanagement', 'kostensteuerung', 'kostenkontrolle', 'kostenberechnung', 'kostenschätzung'],
-    'Projektmanagement': ['projektmanagement', 'projektsteuerung', 'projektleitung', 'projektsteuerer'],
+    'Projektmanagement': ['projektmanagement', 'projektleitung', 'projektsteuerer'],
+    'Projektsteuerung': ['projektsteuerung', 'projektsteuerer', 'projektsteuerungsleistung', 'aho'],
+    'Projektcontrolling': ['projektcontrolling', 'projekt-controlling', 'projektcontroller', 'baucontrolling'],
     'Beschaffungsmanagement': ['beschaffung', 'procurement', 'vergabemanagement', 'ausschreibung']
 }
 
