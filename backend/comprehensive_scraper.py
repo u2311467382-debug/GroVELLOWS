@@ -191,7 +191,7 @@ class ComprehensiveScraper:
         return datetime.utcnow() + timedelta(days=30)
     
     def is_relevant_tender(self, title: str, description: str = "") -> bool:
-        """Check if tender matches company services - more permissive for general construction"""
+        """Check if tender matches company services - more permissive to capture more tenders"""
         text = f"{title} {description}".lower()
         
         # Check service keywords
@@ -199,13 +199,21 @@ class ComprehensiveScraper:
             if any(kw in text for kw in keywords):
                 return True
         
-        # General construction terms
+        # General construction and public tender terms - expanded list
         general_terms = [
             'projektsteuerung', 'baumanagement', 'generalplanung', 'objektplanung',
             'fachplanung', 'technische ausrüstung', 'tragwerksplanung', 'bauphysik',
             'architekten', 'ingenieur', 'planung', 'bau', 'neubau', 'sanierung',
             'modernisierung', 'erweiterung', 'umbau', 'hochbau', 'tiefbau',
-            'dienstleistung', 'beratung', 'consulting', 'management'
+            'dienstleistung', 'beratung', 'consulting', 'management',
+            # Additional broad terms to capture more relevant tenders
+            'ausschreibung', 'vergabe', 'auftrag', 'lieferung', 'leistung',
+            'deutschland', 'öffentlich', 'beschaffung', 'rahmenvertrag',
+            'bauarbeiten', 'bauvorhaben', 'infrastruktur', 'gebäude',
+            'krankenhaus', 'klinik', 'schule', 'universität', 'rathaus',
+            'renovierung', 'instandsetzung', 'wartung', 'installation',
+            'elektro', 'heizung', 'lüftung', 'sanitär', 'dach', 'fassade',
+            'architekturbüro', 'planungsbüro', 'ingenieurbüro'
         ]
         if any(term in text for term in general_terms):
             return True
