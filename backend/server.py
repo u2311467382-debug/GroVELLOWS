@@ -2077,44 +2077,32 @@ async def scrape_all_tenders(
         )
     
     try:
-        from scraper import scrape_all_portals
+        from comprehensive_scraper import ComprehensiveScraper
         
-        logger.info(f"Starting live scrape initiated by {current_user['email']}")
+        logger.info(f"Starting comprehensive live scrape initiated by {current_user['email']}")
         
-        # Scrape all portals
-        scraped_tenders = await scrape_all_portals(max_per_portal=max_per_portal)
+        # Use comprehensive scraper
+        scraper = ComprehensiveScraper(db)
+        inserted = await scraper.scrape_all()
         
-        if not scraped_tenders:
-            return {"message": "No new tenders found", "count": 0, "duplicates_skipped": 0}
-        
-        # Deduplicate and insert
-        inserted = 0
-        duplicates = 0
-        
-        for tender in scraped_tenders:
-            # Check if tender already exists by source_id
-            existing = await db.tenders.find_one({"source_id": tender.get("source_id")})
-            
-            if existing:
-                duplicates += 1
-                continue
-            
-            await db.tenders.insert_one(tender)
-            inserted += 1
-        
-        logger.info(f"Scraping complete: {inserted} new tenders, {duplicates} duplicates skipped")
+        logger.info(f"Comprehensive scraping complete: {inserted} new tenders added")
         
         return {
-            "message": f"Scraping complete",
+            "message": f"Comprehensive scraping complete",
             "count": inserted,
-            "duplicates_skipped": duplicates,
-            "sources": ["Bund.de", "TED Europa", "State Portals"]
+            "duplicates_skipped": 0,  # Deduplication handled internally
+            "sources": [
+                "Ausschreibungen Deutschland", "Vergabe Bayern", "e-Vergabe NRW",
+                "Berlin Vergabe", "Hamburg Vergabe", "Baden-Württemberg", "Hessen",
+                "Brandenburg", "Niedersachsen", "Rheinland-Pfalz", "TED Europa",
+                "DTVP", "ibau", "Hospital Portals", "SIMAP.ch (Switzerland)"
+            ]
         }
         
     except ImportError:
-        raise HTTPException(status_code=500, detail="Scraper module not available")
+        raise HTTPException(status_code=500, detail="Comprehensive scraper module not available")
     except Exception as e:
-        logger.error(f"Scraping error: {e}")
+        logger.error(f"Comprehensive scraping error: {e}")
         raise HTTPException(status_code=500, detail=f"Scraping failed: {str(e)}")
 
 @api_router.get("/scrape/status")
