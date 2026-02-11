@@ -520,6 +520,8 @@ async def get_tenders(
     building_typology: Optional[str] = None,
     is_applied: Optional[bool] = None,
     application_status: Optional[str] = None,
+    country: Optional[str] = None,
+    platform_source: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
@@ -536,6 +538,10 @@ async def get_tenders(
         query["is_applied"] = is_applied
     if application_status:
         query["application_status"] = application_status
+    if country:
+        query["country"] = country
+    if platform_source:
+        query["platform_source"] = platform_source
     if search:
         query["$or"] = [
             {"title": {"$regex": search, "$options": "i"}},
