@@ -368,6 +368,37 @@ class GroVELLOWSTestSuite:
         
         print(f"\nDetailed results saved to: /app/test_results_detailed.json")
 
+    def run_all_tests(self):
+        """Run complete test suite focused on review request requirements"""
+        print("🚀 Starting GroVELLOWS Tender Tracking API Test Suite")
+        print("Testing specific requirements from review request:")
+        print("1. Authentication with director@grovellows.de / Director123")
+        print("2. Tender API - should return 145+ tenders from multiple platforms")
+        print("3. Scraping API - POST /api/scrape/all (requires Director role)")
+        print("4. Filters - country=Germany, platform_source filtering")
+        print("5. Data Integrity - verify fields and deduplication")
+        print(f"Backend URL: {BASE_URL}")
+        print("=" * 60)
+        
+        start_time = time.time()
+        
+        # Run specific test requirements
+        self.test_authentication()
+        
+        # Only proceed with other tests if authentication succeeds
+        if self.director_token:
+            tenders = self.test_tender_api_requirements()
+            self.test_scraping_api_requirements()
+            self.test_filter_requirements()
+            self.test_data_integrity_requirements(tenders)
+        else:
+            print("\n❌ Authentication failed - cannot proceed with other tests")
+        
+        end_time = time.time()
+        
+        # Generate summary
+        self.generate_summary(end_time - start_time)
+
 if __name__ == "__main__":
     test_suite = GroVELLOWSTestSuite()
     test_suite.run_all_tests()
