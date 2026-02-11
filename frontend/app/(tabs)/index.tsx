@@ -464,7 +464,7 @@ export default function TendersScreen() {
             <Text style={[styles.quickFilterText, viewMode === 'compact' && styles.quickFilterTextActive]}>View</Text>
           </TouchableOpacity>
 
-          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || searchQuery) && (
+          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || selectedCountry !== 'All' || searchQuery) && (
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
               <Ionicons name="close" size={14} color={colors.error} />
               <Text style={styles.clearButtonText}>Clear</Text>
