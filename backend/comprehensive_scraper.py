@@ -509,6 +509,12 @@ class ComprehensiveScraper:
                     if link_href and not link_href.startswith('http'):
                         link_href = f"https://ausschreibungen-deutschland.de{link_href}"
                     
+                    # Extract Tender ID from URL (e.g., /2439380_Deutschland__...)
+                    tender_id = None
+                    id_match = re.search(r'/(\d{7})_', link_href)
+                    if id_match:
+                        tender_id = id_match.group(1)
+                    
                     # More permissive filter - accept all construction-related tenders
                     if self.is_relevant_tender(original_title):
                         # Extract location from URL (e.g., _2026_Berlin)
@@ -525,11 +531,17 @@ class ComprehensiveScraper:
                         cat_info = self.categorize_tender(original_title)
                         budget = self.extract_budget(original_title)
                         
-                        # IMPORTANT: Keep the EXACT original title and use it as description too
-                        # No truncation, no modification - authentic data from portal
+                        # Build description with Tender ID for verification
+                        description = original_title
+                        if tender_id:
+                            description = f"Ausschreibungs-ID: {tender_id} | {original_title}"
+                        
+                        # IMPORTANT: Keep the EXACT original title
+                        # Description includes Tender ID for easy verification
                         tenders.append({
                             'title': original_title,  # EXACT title from portal
-                            'description': original_title,  # Use same as title for authenticity
+                            'description': description,  # Includes Tender ID
+                            'tender_id': tender_id,  # Store ID separately too
                             'budget': budget,
                             'deadline': self.extract_deadline(original_title),
                             'location': location,
