@@ -374,7 +374,7 @@ export default function TendersScreen() {
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       {/* Main Header with Title, Flags, and Search */}
       <View style={styles.mainHeader}>
         {/* Title Row with Flags */}
