@@ -2763,6 +2763,7 @@ async def cleanup_awarded_tenders():
     """
     Background task that runs every 5 minutes to clean up awarded/closed tenders.
     Only removes tenders that are NOT in any user's favorites.
+    Keeps tenders for 3 months (90 days) maximum.
     """
     try:
         logger.info("🧹 Cleanup task started...")
@@ -2772,14 +2773,19 @@ async def cleanup_awarded_tenders():
         async for fav in db.favorites.find({}, {"tender_id": 1}):
             favorite_tender_ids.add(fav.get("tender_id"))
         
-        # Find awarded/closed tenders that are NOT favorited
-        # Status: Closed OR application_status: Won/Lost
-        # Keep tenders for 2 months (60 days) before cleanup
+        # Find tenders to cleanup:
+        # 1. Status: Closed OR application_status: Won/Lost
+        # 2. OR older than 3 months (90 days) based on created_at or scraped_at
+        # Keep tenders for 3 months (90 days) before cleanup
+        three_months_ago = datetime.utcnow() - timedelta(days=90)
+        
         query = {
             "$or": [
                 {"status": "Closed"},
                 {"application_status": {"$in": ["Won", "Lost"]}},
-                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=60)}}  # Expired > 2 months
+                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=90)}},  # Expired > 3 months
+                {"created_at": {"$lt": three_months_ago}},  # Created > 3 months ago
+                {"scraped_at": {"$lt": three_months_ago}}   # Scraped > 3 months ago
             ]
         }
         
@@ -2800,7 +2806,7 @@ async def cleanup_awarded_tenders():
             deleted_count += 1
         
         if deleted_count > 0:
-            logger.info(f"🧹 Cleanup complete: {deleted_count} awarded/expired tenders removed")
+            logger.info(f"🧹 Cleanup complete: {deleted_count} awarded/expired tenders removed (3-month retention)")
         else:
             logger.info("🧹 Cleanup complete: No tenders to remove")
             
