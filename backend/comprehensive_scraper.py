@@ -498,37 +498,40 @@ class ComprehensiveScraper:
                 
                 # Process all found tenders (no artificial limit)
                 for item in items:
-                    title = item.get_text(strip=True)
+                    # Get the EXACT original title from the portal - no modifications
+                    original_title = item.get_text(strip=True)
                     link_href = item.get('href', '')
                     
                     # Skip if title is too short or empty
-                    if len(title) < 10:
+                    if len(original_title) < 10:
                         continue
                     
                     if link_href and not link_href.startswith('http'):
                         link_href = f"https://ausschreibungen-deutschland.de{link_href}"
                     
                     # More permissive filter - accept all construction-related tenders
-                    if self.is_relevant_tender(title):
+                    if self.is_relevant_tender(original_title):
                         # Extract location from URL (e.g., _2026_Berlin)
                         location_match = re.search(r'_(\d{4})_([A-Za-z-]+)$', link_href)
                         location = location_match.group(2).replace('_', ' ').replace('-', ' ') if location_match else 'Deutschland'
                         
                         # Extract contracting authority from title if available
                         authority = 'Öffentlicher Auftraggeber'
-                        if 'Messe Berlin' in title:
+                        if 'Messe Berlin' in original_title:
                             authority = 'Messe Berlin GmbH'
-                        elif 'Charité' in title:
+                        elif 'Charité' in original_title:
                             authority = 'Charité – Universitätsmedizin Berlin'
                         
-                        cat_info = self.categorize_tender(title)
-                        budget = self.extract_budget(title)
+                        cat_info = self.categorize_tender(original_title)
+                        budget = self.extract_budget(original_title)
                         
+                        # IMPORTANT: Keep the EXACT original title and use it as description too
+                        # No truncation, no modification - authentic data from portal
                         tenders.append({
-                            'title': title[:300],
-                            'description': f"Öffentliche Ausschreibung: {title[:250]}",
+                            'title': original_title,  # EXACT title from portal
+                            'description': original_title,  # Use same as title for authenticity
                             'budget': budget,
-                            'deadline': self.extract_deadline(title),
+                            'deadline': self.extract_deadline(original_title),
                             'location': location,
                             'project_type': 'Public Tender',
                             'contracting_authority': authority,
