@@ -678,7 +678,7 @@ export default function TendersScreen() {
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 }
 
