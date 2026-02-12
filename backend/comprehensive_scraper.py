@@ -36,9 +36,12 @@ SERVICE_KEYWORDS = {
     'Bauüberwachung': ['bauüberwachung', 'bauleitung', 'bauaufsicht', 'baubegleitung', 'objektüberwachung', 'bauoberleitung'],
     'Kostenmanagement': ['kostenmanagement', 'kostensteuerung', 'kostenkontrolle', 'kostenberechnung', 'kostenschätzung'],
     'Projektmanagement': ['projektmanagement', 'projektleitung', 'projektsteuerer'],
-    'Projektsteuerung': ['projektsteuerung', 'projektsteuerer', 'projektsteuerungsleistung', 'aho'],
+    'Projektsteuerung': ['projektsteuerung', 'projektsteuerer', 'projektsteuerungsleistung', 'projektsteuerungsleistungen', 'aho'],
     'Projektcontrolling': ['projektcontrolling', 'projekt-controlling', 'projektcontroller', 'baucontrolling'],
-    'Beschaffungsmanagement': ['beschaffung', 'procurement', 'vergabemanagement', 'ausschreibung']
+    'Beschaffungsmanagement': ['beschaffung', 'procurement', 'vergabemanagement', 'ausschreibung'],
+    # New categories for construction industry
+    'Bauwesen': ['bauwesen', 'bauleistung', 'bauleistungen', 'bauarbeiten', 'bauauftrag', 'bauwerk', 'bauvorhaben', 'bauprojekt'],
+    'Building Construction': ['building construction', 'hochbau', 'tiefbau', 'rohbau', 'ausbau', 'neubau', 'umbau', 'anbau', 'erweiterungsbau'],
 }
 
 # Building typology keywords
