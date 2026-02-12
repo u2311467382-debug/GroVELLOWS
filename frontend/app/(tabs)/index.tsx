@@ -374,55 +374,56 @@ export default function TendersScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header with Title and Country Flags */}
-      <View style={styles.titleHeader}>
-        <Text style={styles.headerTitle}>Tenders</Text>
-        <View style={styles.countryFlagsContainer}>
-          <TouchableOpacity
-            style={[styles.flagButton, selectedCountry === 'All' && styles.flagButtonActive]}
-            onPress={() => handleCountryChange('All')}
-          >
-            <Text style={styles.flagText}>All</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.flagButton, selectedCountry === 'Germany' && styles.flagButtonActive]}
-            onPress={() => handleCountryChange('Germany')}
-          >
-            <Text style={styles.flagEmoji}>🇩🇪</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.flagButton, selectedCountry === 'Switzerland' && styles.flagButtonActive]}
-            onPress={() => handleCountryChange('Switzerland')}
-          >
-            <Text style={styles.flagEmoji}>🇨🇭</Text>
-          </TouchableOpacity>
+      {/* Main Header with Title, Flags, and Search */}
+      <View style={styles.mainHeader}>
+        {/* Title Row with Flags */}
+        <View style={styles.titleRow}>
+          <Text style={styles.headerTitle}>Tenders</Text>
+          <View style={styles.countryFlagsContainer}>
+            <TouchableOpacity
+              style={[styles.flagButton, selectedCountry === 'All' && styles.flagButtonActive]}
+              onPress={() => handleCountryChange('All')}
+            >
+              <Text style={[styles.flagText, selectedCountry === 'All' && styles.flagTextActive]}>All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.flagButton, selectedCountry === 'Germany' && styles.flagButtonActive]}
+              onPress={() => handleCountryChange('Germany')}
+            >
+              <Text style={styles.flagEmoji}>🇩🇪</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.flagButton, selectedCountry === 'Switzerland' && styles.flagButtonActive]}
+              onPress={() => handleCountryChange('Switzerland')}
+            >
+              <Text style={styles.flagEmoji}>🇨🇭</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
 
-      {/* Enhanced Header */}
-      <View style={styles.header}>
+        {/* Search Row */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color={colors.textLight} />
+            <Ionicons name="search" size={18} color="#FFFFFF80" />
             <TextInput
               style={styles.searchInput}
               placeholder={t('tenders.search')}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor={colors.textLight}
+              placeholderTextColor="#FFFFFF80"
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color={colors.textLight} />
+                <Ionicons name="close-circle" size={18} color="#FFFFFF80" />
               </TouchableOpacity>
             ) : null}
           </View>
           <TouchableOpacity
-            style={styles.iconButton}
+            style={styles.filterButton}
             onPress={() => setShowFilters(true)}
           >
-            <Ionicons name="options" size={22} color={colors.primary} />
-            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || selectedCountry !== 'All') && (
+            <Ionicons name="options" size={22} color="#FFFFFF" />
+            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All') && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
