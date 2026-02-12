@@ -1958,7 +1958,7 @@ class ComprehensiveScraper:
                                     if title and self.is_relevant_tender(title):
                                         # Check publication date - extract year from text
                                         pub_date = self.extract_publication_date(text)
-                                        if pub_date and pub_date.year < 2025:
+                                        if pub_date and pub_date.year < 2026:
                                             continue  # Skip old tenders
                                         
                                         # Get link if available
