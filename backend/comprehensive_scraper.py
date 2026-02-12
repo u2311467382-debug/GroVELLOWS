@@ -493,11 +493,11 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_ausschreibungen_deutschland(self) -> list:
-        """Scrape ausschreibungen-deutschland.de - All German States"""
+        """Scrape ausschreibungen-deutschland.de - All German States with PAGINATION (5 pages)"""
         tenders = []
         
-        # Main page and state-specific pages
-        urls = [
+        # State-specific base URLs
+        state_base_urls = [
             "https://ausschreibungen-deutschland.de/",
             "https://ausschreibungen-deutschland.de/Baden-Wuerttemberg",
             "https://ausschreibungen-deutschland.de/Bayern",
@@ -517,9 +517,21 @@ class ComprehensiveScraper:
             "https://ausschreibungen-deutschland.de/Mecklenburg-Vorpommern",
         ]
         
-        for url in urls:
-            html = await self.fetch_page(url)
-            if html:
+        seen_tender_ids = set()  # Track seen tender IDs to avoid duplicates across pages
+        
+        for base_url in state_base_urls:
+            # Scrape multiple pages (pagination)
+            for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
+                # Build paginated URL - ausschreibungen-deutschland.de uses /seite/N pattern
+                if page_num == 1:
+                    url = base_url
+                else:
+                    url = f"{base_url}/seite/{page_num}" if not base_url.endswith('/') else f"{base_url}seite/{page_num}"
+                
+                html = await self.fetch_page(url)
+                if not html:
+                    break  # No more pages or error
+                    
                 soup = BeautifulSoup(html, 'lxml')
                 
                 # Find ALL links on the page
@@ -532,9 +544,12 @@ class ComprehensiveScraper:
                     if href and re.match(r'^/2[0-9]{6}_', href):
                         items.append(link)
                 
-                logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} tender links")
+                if len(items) == 0:
+                    break  # No tenders found, stop pagination for this state
                 
-                # Process all found tenders (no artificial limit)
+                logger.info(f"Ausschreibungen-Deutschland ({base_url} page {page_num}): Found {len(items)} tender links")
+                
+                # Process all found tenders
                 for item in items:
                     # Get the EXACT original title from the portal - no modifications
                     original_title = item.get_text(strip=True)
@@ -553,11 +568,28 @@ class ComprehensiveScraper:
                     if id_match:
                         tender_id = id_match.group(1)
                     
+                    # Skip if we've already seen this tender (avoid duplicates across pages/states)
+                    if tender_id and tender_id in seen_tender_ids:
+                        continue
+                    if tender_id:
+                        seen_tender_ids.add(tender_id)
+                    
                     # More permissive filter - accept all construction-related tenders
                     if self.is_relevant_tender(original_title):
-                        # Extract location from URL (e.g., _2026_Berlin)
-                        location_match = re.search(r'_(\d{4})_([A-Za-z-]+)$', link_href)
-                        location = location_match.group(2).replace('_', ' ').replace('-', ' ') if location_match else 'Deutschland'
+                        # Extract year from URL to check publication date (format: _2025_Berlin or _2026_Berlin)
+                        year_match = re.search(r'_(\d{4})_([A-Za-z-]+)$', link_href)
+                        publication_year = None
+                        location = 'Deutschland'
+                        if year_match:
+                            try:
+                                publication_year = int(year_match.group(1))
+                            except:
+                                pass
+                            location = year_match.group(2).replace('_', ' ').replace('-', ' ')
+                        
+                        # Filter by publication year - only 2025 and later
+                        if publication_year and publication_year < 2025:
+                            continue  # Skip old tenders
                         
                         # Extract contracting authority from title if available
                         authority = 'Öffentlicher Auftraggeber'
@@ -569,13 +601,9 @@ class ComprehensiveScraper:
                         cat_info = self.categorize_tender(original_title)
                         budget = self.extract_budget(original_title)
                         
-                        # Build description with Tender ID for verification
-                        description = original_title
-                        if tender_id:
-                            description = f"Ausschreibungs-ID: {tender_id} | {original_title}"
+                        # Build description with Tender ID for easy verification
+                        description = f"Ausschreibungs-ID: {tender_id} | {original_title}" if tender_id else original_title
                         
-                        # IMPORTANT: Keep the EXACT original title
-                        # Description includes Tender ID for easy verification
                         tenders.append({
                             'title': original_title,  # EXACT title from portal
                             'description': description,  # Includes Tender ID
@@ -592,9 +620,12 @@ class ComprehensiveScraper:
                             'direct_link': link_href,
                             'country': 'Germany',
                         })
+                
+                await asyncio.sleep(0.3)  # Rate limiting between pages
             
-            await asyncio.sleep(0.3)  # Rate limiting
+            await asyncio.sleep(0.2)  # Rate limiting between states
         
+        logger.info(f"Ausschreibungen-Deutschland TOTAL: {len(tenders)} tenders (from {self.PAGES_TO_SCRAPE} pages per state)")
         return tenders
 
     async def scrape_ted_europa(self) -> list:
