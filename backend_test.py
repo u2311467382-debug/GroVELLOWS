@@ -30,7 +30,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://project-pulse-251.preview.emergentagent.com/api"
+BASE_URL = "https://buildtender-1.preview.emergentagent.com/api"
 
 # Test credentials from review request
 DIRECTOR_CREDENTIALS = {
