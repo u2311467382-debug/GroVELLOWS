@@ -204,19 +204,26 @@ class ComprehensiveScraper:
         
         # General construction and public tender terms - expanded list
         general_terms = [
-            'projektsteuerung', 'baumanagement', 'generalplanung', 'objektplanung',
+            'projektsteuerung', 'projektsteuerungsleistung', 'projektsteuerungsleistungen',
+            'baumanagement', 'generalplanung', 'objektplanung',
             'fachplanung', 'technische ausrüstung', 'tragwerksplanung', 'bauphysik',
             'architekten', 'ingenieur', 'planung', 'bau', 'neubau', 'sanierung',
             'modernisierung', 'erweiterung', 'umbau', 'hochbau', 'tiefbau',
             'dienstleistung', 'beratung', 'consulting', 'management',
+            # Bauwesen and Building Construction terms
+            'bauwesen', 'bauleistung', 'bauleistungen', 'bauarbeiten', 'bauauftrag',
+            'bauwerk', 'bauvorhaben', 'bauprojekt', 'building construction',
+            'rohbau', 'ausbau', 'anbau', 'erweiterungsbau',
             # Additional broad terms to capture more relevant tenders
             'ausschreibung', 'vergabe', 'auftrag', 'lieferung', 'leistung',
             'deutschland', 'öffentlich', 'beschaffung', 'rahmenvertrag',
-            'bauarbeiten', 'bauvorhaben', 'infrastruktur', 'gebäude',
+            'infrastruktur', 'gebäude',
             'krankenhaus', 'klinik', 'schule', 'universität', 'rathaus',
             'renovierung', 'instandsetzung', 'wartung', 'installation',
             'elektro', 'heizung', 'lüftung', 'sanitär', 'dach', 'fassade',
-            'architekturbüro', 'planungsbüro', 'ingenieurbüro'
+            'architekturbüro', 'planungsbüro', 'ingenieurbüro',
+            # Messe/Exhibition specific
+            'messe', 'messebau', 'messegelände', 'exhibition', 'kongresszentrum'
         ]
         if any(term in text for term in general_terms):
             return True
