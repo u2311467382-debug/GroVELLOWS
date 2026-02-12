@@ -651,8 +651,8 @@ class ComprehensiveScraper:
                                 pass
                             location = year_match.group(2).replace('_', ' ').replace('-', ' ')
                         
-                        # Filter by publication year - only 2025 and later
-                        if publication_year and publication_year < 2025:
+                        # Filter by publication year - only 2026 and later
+                        if publication_year and publication_year < 2026:
                             continue  # Skip old tenders
                         
                         # Extract contracting authority from title if available
