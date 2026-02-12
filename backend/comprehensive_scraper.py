@@ -470,6 +470,13 @@ class ComprehensiveScraper:
             "https://ausschreibungen-deutschland.de/Niedersachsen",
             "https://ausschreibungen-deutschland.de/Nordrhein-Westfalen",
             "https://ausschreibungen-deutschland.de/Sachsen",
+            "https://ausschreibungen-deutschland.de/Rheinland-Pfalz",
+            "https://ausschreibungen-deutschland.de/Bremen",
+            "https://ausschreibungen-deutschland.de/Saarland",
+            "https://ausschreibungen-deutschland.de/Schleswig-Holstein",
+            "https://ausschreibungen-deutschland.de/Thueringen",
+            "https://ausschreibungen-deutschland.de/Sachsen-Anhalt",
+            "https://ausschreibungen-deutschland.de/Mecklenburg-Vorpommern",
         ]
         
         for url in urls:
@@ -477,46 +484,56 @@ class ComprehensiveScraper:
             if html:
                 soup = BeautifulSoup(html, 'lxml')
                 
-                # Find all tender links - they have specific URL pattern
-                all_links = soup.select('a[href*="/2"]')  # Tender IDs start with 2
+                # Find all tender links - they have specific URL pattern with IDs starting with 24
+                all_links = soup.select('a[href*="/24"], a[href*="/23"], a[href*="/22"]')
                 items = []
                 
                 for link in all_links:
                     href = link.get('href', '')
-                    if href and '/2' in href and 'Deutschland' in href:
+                    # Match tender URLs like /2439380_Deutschland__...
+                    if href and re.search(r'/2[0-9]{6}_', href):
                         items.append(link)
                 
                 logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} items")
                 
-                for item in items[:20]:  # Limit per page
+                # Increased limit to 50 per page to capture more tenders
+                for item in items[:50]:
                     title = item.get_text(strip=True)
-                    if len(title) > 20 and self.is_relevant_tender(title):
+                    # Reduced minimum length and use broader filter
+                    if len(title) > 15:
                         link_href = item.get('href', '')
                         if link_href and not link_href.startswith('http'):
                             link_href = f"https://ausschreibungen-deutschland.de{link_href}"
                         
-                        # Extract location from title or URL
-                        location_match = re.search(r'_(\d{4})_([^/]+)$', link_href)
-                        location = location_match.group(2).replace('_', ' ') if location_match else 'Deutschland'
-                        
-                        cat_info = self.categorize_tender(title)
-                        budget = self.extract_budget(title)
-                        
-                        tenders.append({
-                            'title': title[:200],  # Truncate long titles
-                            'description': f"Öffentliche Ausschreibung: {title[:150]}",
-                            'budget': budget,
-                            'deadline': self.extract_deadline(title),
-                            'location': location,
-                            'project_type': 'Public Tender',
-                            'contracting_authority': 'Öffentlicher Auftraggeber',
-                            'category': cat_info['category'] or 'Projektmanagement',
-                            'building_typology': cat_info['building_typology'],
-                            'platform_source': 'Ausschreibungen Deutschland',
-                            'platform_url': 'https://ausschreibungen-deutschland.de/',
-                            'direct_link': link_href,
-                            'country': 'Germany',
-                        })
+                        # Check if relevant (using expanded filter)
+                        if self.is_relevant_tender(title):
+                            # Extract location from URL
+                            location_match = re.search(r'_(\d{4})_([^/]+)$', link_href)
+                            location = location_match.group(2).replace('_', ' ') if location_match else 'Deutschland'
+                            
+                            # Extract contracting authority from title if available
+                            authority = 'Öffentlicher Auftraggeber'
+                            if 'Messe Berlin' in title:
+                                authority = 'Messe Berlin GmbH'
+                            
+                            cat_info = self.categorize_tender(title)
+                            budget = self.extract_budget(title)
+                            
+                            tenders.append({
+                                'title': title[:250],  # Allow longer titles
+                                'description': f"Öffentliche Ausschreibung: {title[:200]}",
+                                'budget': budget,
+                                'deadline': self.extract_deadline(title),
+                                'location': location,
+                                'project_type': 'Public Tender',
+                                'contracting_authority': authority,
+                                'category': cat_info['category'] or 'Projektmanagement',
+                                'building_typology': cat_info['building_typology'],
+                                'platform_source': 'Ausschreibungen Deutschland',
+                                'platform_url': 'https://ausschreibungen-deutschland.de/',
+                                'direct_link': link_href,
+                                'country': 'Germany',
+                            })
             
             await asyncio.sleep(0.3)  # Rate limiting
         
