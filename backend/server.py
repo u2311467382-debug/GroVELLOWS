@@ -217,6 +217,8 @@ class Tender(BaseModel):
     platform_source: str = "Unknown"
     platform_url: Optional[str] = None
     application_url: Optional[str] = None  # Direct link to apply for the tender
+    direct_link: Optional[str] = None  # Alternative direct link field
+    country: Optional[str] = "Germany"  # Country field for filtering
     status: str = TenderStatus.NEW
     is_applied: bool = False
     applied_date: Optional[datetime] = None
