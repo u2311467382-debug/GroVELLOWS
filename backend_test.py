@@ -494,4 +494,11 @@ class GroVELLOWSTestSuite:
 
 if __name__ == "__main__":
     test_suite = GroVELLOWSTestSuite()
-    test_suite.run_all_tests()
+    success = test_suite.run_all_tests()
+    
+    if success:
+        print("\n🎉 All tests passed!")
+        exit(0)
+    else:
+        print("\n💥 Some tests failed!")
+        exit(1)
