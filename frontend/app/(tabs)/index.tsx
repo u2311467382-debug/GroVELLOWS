@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../../utils/colors';
+import { colors, typography } from '../../utils/colors';
 import api from '../../utils/api';
 import { format } from 'date-fns';
 import { useTranslation } from 'react-i18next';
