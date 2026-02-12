@@ -413,15 +413,28 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_dtvp(self) -> list:
-        """Scrape Deutsches Vergabeportal (DTVP)"""
+        """Scrape Deutsches Vergabeportal (DTVP) with pagination"""
         tenders = []
-        url = "https://www.dtvp.de/Center/common/project/search.do"
+        seen_tender_ids = set()
         
-        html = await self.fetch_page(url)
-        if html:
+        # Scrape multiple pages
+        for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
+            if page_num == 1:
+                url = "https://www.dtvp.de/Center/common/project/search.do"
+            else:
+                url = f"https://www.dtvp.de/Center/common/project/search.do?page={page_num}"
+            
+            html = await self.fetch_page(url)
+            if not html:
+                break
+                
             soup = BeautifulSoup(html, 'lxml')
             items = soup.select('.searchResult, article, .tender-item, table tr, .project-row')
-            logger.info(f"DTVP: Found {len(items)} items")
+            
+            if len(items) == 0:
+                break
+            
+            logger.info(f"DTVP (page {page_num}): Found {len(items)} items")
             
             for item in items:
                 title_elem = item.select_one('a, h2, .title, td a')
@@ -432,11 +445,27 @@ class ComprehensiveScraper:
                         if link and not link.startswith('http'):
                             link = f"https://www.dtvp.de{link}"
                         
+                        # Extract tender ID from link (e.g., /project/12345)
+                        tender_id = None
+                        id_match = re.search(r'/(\d{5,8})(?:/|$|\?)', link)
+                        if id_match:
+                            tender_id = id_match.group(1)
+                        
+                        # Skip duplicates
+                        if tender_id and tender_id in seen_tender_ids:
+                            continue
+                        if tender_id:
+                            seen_tender_ids.add(tender_id)
+                        
                         cat_info = self.categorize_tender(title)
+                        
+                        # Build description with Tender ID
+                        description = f"DTVP-ID: {tender_id} | {title}" if tender_id else f"DTVP Ausschreibung: {title}"
                         
                         tenders.append({
                             'title': title,
-                            'description': f"DTVP Ausschreibung: {title}",
+                            'description': description,
+                            'tender_id': tender_id,
                             'budget': None,
                             'deadline': datetime.utcnow() + timedelta(days=30),
                             'location': 'Deutschland',
@@ -449,7 +478,10 @@ class ComprehensiveScraper:
                             'direct_link': link,
                             'country': 'Germany',
                         })
+            
+            await asyncio.sleep(0.3)
         
+        logger.info(f"DTVP TOTAL: {len(tenders)} tenders (from {self.PAGES_TO_SCRAPE} pages)")
         return tenders
 
     async def scrape_oeffentliche_vergabe(self) -> list:
