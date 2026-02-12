@@ -1800,8 +1800,11 @@ class ComprehensiveScraper:
     # ==================== SWISS PLATFORM ====================
 
     async def scrape_simap_switzerland(self) -> list:
-        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data from archive"""
+        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data from archive
+        Includes pagination (5 pages) and Tender ID (Meldungsnummer) in descriptions
+        Only returns tenders from 2025 onwards"""
         tenders = []
+        seen_tender_ids = set()  # Track seen tender IDs to avoid duplicates
         
         try:
             from playwright.async_api import async_playwright
@@ -1813,7 +1816,7 @@ class ComprehensiveScraper:
                 page = await browser.new_page(viewport={'width': 1920, 'height': 1080})
                 
                 # Search for multiple construction-related terms
-                search_terms = ['Projektsteuerung', 'Bauleitung', 'Baumanagement', 'Hochbau', 'Architektur']
+                search_terms = ['Projektsteuerung', 'Bauleitung', 'Baumanagement', 'Hochbau', 'Architektur', 'Planung', 'Sanierung']
                 
                 for term in search_terms:
                     try:
@@ -1831,69 +1834,111 @@ class ComprehensiveScraper:
                         await search_btn.click()
                         await page.wait_for_timeout(4000)
                         
-                        # Get the table rows with results
-                        rows = await page.locator('table tbody tr, tr').all()
-                        logger.info(f"simap.ch ({term}): Found {len(rows)} result rows")
-                        
-                        for row in rows[:15]:  # Limit per search term
-                            try:
-                                text = await row.inner_text()
-                                text = text.strip()
-                                
-                                # Skip header rows or empty rows
-                                if len(text) < 30 or ('Datum' in text and 'Nr.' in text):
-                                    continue
-                                
-                                # Parse the tender info from row text
-                                lines = text.split('\n')
-                                
-                                # Get the tender title
-                                title = None
-                                for line in lines:
-                                    line = line.strip()
-                                    if len(line) > 30 and not line[0].isdigit() and 'CPV:' not in line and 'Gesamtansicht' not in line:
-                                        title = line
-                                        break
-                                
-                                if title and self.is_relevant_tender(title):
-                                    # Get link if available
-                                    link_elem = row.locator('a').first
-                                    link = 'https://archiv.simap.ch/result'
-                                    if await link_elem.count() > 0:
-                                        href = await link_elem.get_attribute('href') or ''
-                                        if href:
-                                            link = f'https://archiv.simap.ch{href}' if not href.startswith('http') else href
+                        # Paginate through results (up to PAGES_TO_SCRAPE pages)
+                        for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
+                            if page_num > 1:
+                                # Try to click "Next" or navigate to next page
+                                try:
+                                    next_btn = page.locator('button:has-text("Weiter"), a:has-text("Weiter"), .pagination a.next, a[rel="next"]').first
+                                    if await next_btn.count() > 0:
+                                        await next_btn.click()
+                                        await page.wait_for_timeout(3000)
+                                    else:
+                                        break  # No more pages
+                                except:
+                                    break  # No pagination available
+                            
+                            # Get the table rows with results
+                            rows = await page.locator('table tbody tr, tr').all()
+                            logger.info(f"simap.ch ({term}, page {page_num}): Found {len(rows)} result rows")
+                            
+                            if len(rows) == 0:
+                                break  # No more results
+                            
+                            for row in rows[:20]:  # Limit per page
+                                try:
+                                    text = await row.inner_text()
+                                    text = text.strip()
                                     
-                                    # Extract authority from text
-                                    authority = 'Schweizer Öffentlicher Auftraggeber'
+                                    # Skip header rows or empty rows
+                                    if len(text) < 30 or ('Datum' in text and 'Nr.' in text):
+                                        continue
+                                    
+                                    # Parse the tender info from row text
+                                    lines = text.split('\n')
+                                    
+                                    # Extract Meldungsnummer (Tender ID) - usually a number at start of row
+                                    tender_id = None
                                     for line in lines:
                                         line = line.strip()
-                                        if any(kw in line for kw in ['Bundesamt', 'Kanton', 'Stadt', 'Gemeinde', 'SBB', 'ETH', 'Universität']):
-                                            authority = line
+                                        # Match patterns like "1234567" or "Meldungsnummer: 1234567"
+                                        id_match = re.search(r'(\d{6,8})', line)
+                                        if id_match and len(line) < 20:
+                                            tender_id = id_match.group(1)
                                             break
                                     
-                                    cat_info = self.categorize_tender(title)
+                                    # Skip if we've already seen this tender
+                                    if tender_id and tender_id in seen_tender_ids:
+                                        continue
+                                    if tender_id:
+                                        seen_tender_ids.add(tender_id)
                                     
-                                    # Check if this tender already exists (dedup by title)
-                                    if not any(t['title'] == title for t in tenders):
-                                        tenders.append({
-                                            'title': title,  # EXACT title from portal
-                                            'description': title,  # Same as title for authenticity
-                                            'budget': self.extract_budget(text),
-                                            'deadline': self.extract_deadline(text),
-                                            'location': 'Schweiz',
-                                            'project_type': 'Public Tender',
-                                            'contracting_authority': authority,
-                                            'category': cat_info['category'] or 'Projektmanagement',
-                                            'building_typology': cat_info['building_typology'],
-                                            'platform_source': 'simap.ch (Schweiz)',
-                                            'platform_url': 'https://archiv.simap.ch',
-                                            'direct_link': link,
-                                            'country': 'Switzerland',
-                                        })
-                            except Exception as e:
-                                logger.debug(f"Error parsing row: {e}")
-                                continue
+                                    # Get the tender title
+                                    title = None
+                                    for line in lines:
+                                        line = line.strip()
+                                        if len(line) > 30 and not line[0].isdigit() and 'CPV:' not in line and 'Gesamtansicht' not in line:
+                                            title = line
+                                            break
+                                    
+                                    if title and self.is_relevant_tender(title):
+                                        # Check publication date - extract year from text
+                                        pub_date = self.extract_publication_date(text)
+                                        if pub_date and pub_date.year < 2025:
+                                            continue  # Skip old tenders
+                                        
+                                        # Get link if available
+                                        link_elem = row.locator('a').first
+                                        link = 'https://archiv.simap.ch/result'
+                                        if await link_elem.count() > 0:
+                                            href = await link_elem.get_attribute('href') or ''
+                                            if href:
+                                                link = f'https://archiv.simap.ch{href}' if not href.startswith('http') else href
+                                        
+                                        # Extract authority from text
+                                        authority = 'Schweizer Öffentlicher Auftraggeber'
+                                        for line in lines:
+                                            line = line.strip()
+                                            if any(kw in line for kw in ['Bundesamt', 'Kanton', 'Stadt', 'Gemeinde', 'SBB', 'ETH', 'Universität']):
+                                                authority = line
+                                                break
+                                        
+                                        cat_info = self.categorize_tender(title)
+                                        
+                                        # Build description with Tender ID (Meldungsnummer) for verification
+                                        description = f"Meldungsnummer: {tender_id} | {title}" if tender_id else title
+                                        
+                                        # Check if this tender already exists (dedup by title)
+                                        if not any(t['title'] == title for t in tenders):
+                                            tenders.append({
+                                                'title': title,  # EXACT title from portal
+                                                'description': description,  # Includes Meldungsnummer
+                                                'tender_id': tender_id,  # Store ID separately
+                                                'budget': self.extract_budget(text),
+                                                'deadline': self.extract_deadline(text),
+                                                'location': 'Schweiz',
+                                                'project_type': 'Public Tender',
+                                                'contracting_authority': authority,
+                                                'category': cat_info['category'] or 'Projektmanagement',
+                                                'building_typology': cat_info['building_typology'],
+                                                'platform_source': 'simap.ch (Schweiz)',
+                                                'platform_url': 'https://archiv.simap.ch',
+                                                'direct_link': link,
+                                                'country': 'Switzerland',
+                                            })
+                                except Exception as e:
+                                    logger.debug(f"Error parsing row: {e}")
+                                    continue
                         
                     except Exception as e:
                         logger.warning(f"simap.ch search error for '{term}': {e}")
@@ -1906,7 +1951,7 @@ class ComprehensiveScraper:
         except Exception as e:
             logger.error(f"simap.ch Playwright error: {e}")
         
-        logger.info(f"simap.ch: Found {len(tenders)} REAL Swiss tenders")
+        logger.info(f"simap.ch: Found {len(tenders)} REAL Swiss tenders (from {self.PAGES_TO_SCRAPE} pages per search term)")
         return tenders
 
     # ==================== DEDUPLICATION ====================
