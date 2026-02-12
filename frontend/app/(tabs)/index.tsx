@@ -784,6 +784,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
+    fontFamily: typography.fontFamily,
   },
   quickFilterTextActive: {
     color: colors.textWhite,
@@ -804,11 +805,12 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.error,
     fontWeight: '500',
+    fontFamily: typography.fontFamily,
   },
   resultsCount: {
     fontSize: 12,
     color: colors.textLight,
-    marginTop: 4,
+    fontFamily: typography.fontFamily,
   },
   list: {
     padding: 16,
