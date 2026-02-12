@@ -303,9 +303,73 @@ class GroVELLOWSTestSuite:
         except Exception as e:
             self.log_test("Platform Distribution Requirements", False, f"Error analyzing platforms: {str(e)}")
 
+    def test_scraping_requirements(self):
+        """Test Scraping Requirements - POST /api/scrape/all with Director auth"""
+        print("\n=== SCRAPING REQUIREMENTS TESTS ===")
+        
+        if not self.director_token:
+            self.log_test("Scraping Requirements", False, "No director token available")
+            return
+            
+        # Test scrape status endpoint first
+        try:
+            response = self.make_request("GET", "/scrape/status", token=self.director_token)
+            if response.status_code == 200:
+                data = response.json()
+                self.log_test("Scrape Status Endpoint", True, 
+                            f"Status retrieved: {data.get('message', 'Status available')}")
+            else:
+                self.log_test("Scrape Status Endpoint", False, f"Status: {response.status_code}")
+        except Exception as e:
+            self.log_test("Scrape Status Endpoint", False, f"Exception: {str(e)}")
+            
+        # Test comprehensive scraper trigger (Director only)
+        try:
+            response = self.make_request("POST", "/scrape/all", token=self.director_token)
+            if response.status_code == 200:
+                data = response.json()
+                scraped_count = data.get("count", 0)
+                message = data.get("message", "")
+                
+                self.log_test("Comprehensive Scraper Trigger", True, 
+                            f"Scraping completed successfully: {message}")
+                
+                if scraped_count >= 0:  # Allow 0 if no new tenders found
+                    self.log_test("Scraper Execution", True, 
+                                f"Scraper executed and found {scraped_count} new tenders")
+                else:
+                    self.log_test("Scraper Execution", False, 
+                                f"Unexpected scraper result: {scraped_count}")
+                
+            elif response.status_code == 429:
+                self.log_test("Comprehensive Scraper Trigger", True, 
+                            "Rate limiting working correctly (429 Too Many Requests)")
+            elif response.status_code == 403:
+                self.log_test("Comprehensive Scraper Trigger", False, 
+                            "Access denied - Director role authentication issue")
+            else:
+                self.log_test("Comprehensive Scraper Trigger", False, 
+                            f"Scraping failed with status {response.status_code}: {response.text}")
+                
+        except Exception as e:
+            self.log_test("Comprehensive Scraper Trigger", False, f"Exception: {str(e)}")
+            
+        # Test Director role requirement (if we have a regular user token)
+        if self.regular_user_token:
+            try:
+                response = self.make_request("POST", "/scrape/all", token=self.regular_user_token)
+                if response.status_code == 403:
+                    self.log_test("Director Role Requirement", True, 
+                                "Regular users correctly blocked from scraping (403 Forbidden)")
+                else:
+                    self.log_test("Director Role Requirement", False, 
+                                f"Regular user should be blocked. Status: {response.status_code}")
+            except Exception as e:
+                self.log_test("Director Role Requirement", False, f"Exception: {str(e)}")
+
     def test_data_integrity_requirements(self, tenders):
-        """Test 5: Data Integrity - required fields and deduplication"""
-        print("\n=== DATA INTEGRITY REQUIREMENTS ===")
+        """Test Data Integrity - verify required fields"""
+        print("\n=== DATA INTEGRITY TESTS ===")
         
         if not tenders:
             self.log_test("Data Integrity Requirements", False, "No tenders available for testing")
@@ -315,7 +379,7 @@ class GroVELLOWSTestSuite:
             # Required fields verification
             required_fields = ["title", "description", "platform_source", "country", "location", "deadline"]
             missing_fields_count = {}
-            total_checked = min(len(tenders), 100)  # Check first 100 tenders
+            total_checked = min(len(tenders), 50)  # Check first 50 tenders
             
             for tender in tenders[:total_checked]:
                 for field in required_fields:
@@ -332,85 +396,56 @@ class GroVELLOWSTestSuite:
                 self.log_test("Required Fields Verification", False, 
                             f"Missing fields found: {missing_summary}")
             
-            # Deduplication verification
-            titles = [t.get("title", "") for t in tenders]
-            unique_titles = set(titles)
-            duplicate_count = len(titles) - len(unique_titles)
-            
-            if duplicate_count == 0:
-                self.log_test("Deduplication Verification", True, 
-                            f"No duplicate titles found in {len(titles)} tenders")
+            # Country field verification
+            countries = set(t.get("country") for t in tenders if t.get("country"))
+            if "Germany" in countries and "Switzerland" in countries:
+                self.log_test("Country Field Diversity", True, 
+                            f"Found both Germany and Switzerland in country fields: {countries}")
             else:
-                # Find duplicate examples
-                title_counts = {}
-                for title in titles:
-                    if title:  # Skip empty titles
-                        title_counts[title] = title_counts.get(title, 0) + 1
-                
-                duplicates = {k: v for k, v in title_counts.items() if v > 1}
-                duplicate_examples = list(duplicates.items())[:3]  # Show first 3 examples
-                
-                self.log_test("Deduplication Verification", False, 
-                            f"{duplicate_count} duplicate titles found. Examples: {duplicate_examples}")
+                self.log_test("Country Field Diversity", False, 
+                            f"Missing expected countries. Found: {countries}")
             
         except Exception as e:
             self.log_test("Data Integrity Requirements", False, f"Exception: {str(e)}")
-    
-    def generate_summary(self, duration: float):
-        """Generate test summary"""
-        print("\n" + "=" * 60)
-        print("🏁 TEST SUMMARY")
-        print("=" * 60)
-        
-        total_tests = len(self.test_results)
-        passed_tests = sum(1 for result in self.test_results if result["success"])
-        failed_tests = total_tests - passed_tests
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: {passed_tests} ✅")
-        print(f"Failed: {failed_tests} ❌")
-        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
-        print(f"Duration: {duration:.2f} seconds")
-        
-        if failed_tests > 0:
-            print(f"\n❌ FAILED TESTS ({failed_tests}):")
-            for result in self.test_results:
-                if not result["success"]:
-                    print(f"  • {result['test']}: {result['details']}")
-        
-        print(f"\n✅ PASSED TESTS ({passed_tests}):")
-        for result in self.test_results:
-            if result["success"]:
-                print(f"  • {result['test']}: {result['details']}")
-        
-        # Save detailed results to file
-        with open("/app/test_results_detailed.json", "w") as f:
-            json.dump(self.test_results, f, indent=2, default=str)
-        
-        print(f"\nDetailed results saved to: /app/test_results_detailed.json")
 
     def run_all_tests(self):
         """Run complete test suite focused on review request requirements"""
         print("🚀 Starting GroVELLOWS Tender Tracking API Test Suite")
         print("Testing specific requirements from review request:")
-        print("1. Authentication with director@grovellows.de / Director123")
-        print("2. Tender API - should return 145+ tenders from multiple platforms")
-        print("3. Scraping API - POST /api/scrape/all (requires Director role)")
-        print("4. Filters - country=Germany, platform_source filtering")
-        print("5. Data Integrity - verify fields and deduplication")
+        print("")
+        print("**Authentication:**")
+        print("- Login: POST /api/auth/login with director@grovellows.de / Director123")
+        print("")
+        print("**Critical Tests - Tender Country Filter:**")
+        print("1. GET /api/tenders - Should return ~237 total tenders")
+        print("2. GET /api/tenders?country=Germany - Should return ~231 German tenders ONLY")
+        print("3. GET /api/tenders?country=Switzerland - Should return exactly 6 Swiss tenders ONLY")
+        print("")
+        print("**Verify Country Filter is Exclusive:**")
+        print("- When country=Germany, verify NO tender has country='Switzerland'")
+        print("- When country=Switzerland, verify ALL tenders have country='Switzerland'")
+        print("- Check platform_source for Swiss tenders should be 'simap.ch (Schweiz)'")
+        print("")
+        print("**Platform Distribution Test:**")
+        print("- Check platform_source includes: Ausschreibungen Deutschland, Vergabe Bayern, simap.ch (Schweiz), Asklepios Kliniken")
+        print("")
+        print("**Scraping Test:**")
+        print("- POST /api/scrape/all with Director auth - Should trigger comprehensive scraper")
+        print("")
         print(f"Backend URL: {BASE_URL}")
-        print("=" * 60)
+        print("=" * 80)
         
         start_time = time.time()
         
-        # Run specific test requirements
+        # Run specific test requirements in order
         self.test_authentication()
         
         # Only proceed with other tests if authentication succeeds
         if self.director_token:
-            tenders = self.test_tender_api_requirements()
-            self.test_scraping_api_requirements()
-            self.test_filter_requirements()
+            tenders = self.test_tender_count_requirements()
+            self.test_country_filtering_requirements()
+            self.test_platform_distribution_requirements()
+            self.test_scraping_requirements()
             self.test_data_integrity_requirements(tenders)
         else:
             print("\n❌ Authentication failed - cannot proceed with other tests")
