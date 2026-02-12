@@ -2,11 +2,25 @@
 """
 GroVELLOWS Tender Tracking API Test Suite
 Testing specific requirements from review request:
-1. Authentication with director@grovellows.de / Director123
-2. Tender API - should return 145+ tenders from multiple platforms
-3. Scraping API - POST /api/scrape/all (requires Director role)
-4. Filters - country=Germany, platform_source filtering
-5. Data Integrity - verify fields and deduplication
+
+**Authentication:**
+- Login: POST /api/auth/login with director@grovellows.de / Director123
+
+**Critical Tests - Tender Country Filter:**
+1. GET /api/tenders - Should return ~237 total tenders
+2. GET /api/tenders?country=Germany - Should return ~231 German tenders ONLY (NO Swiss tenders)
+3. GET /api/tenders?country=Switzerland - Should return exactly 6 Swiss tenders ONLY
+
+**Verify Country Filter is Exclusive:**
+- When country=Germany, verify NO tender has country="Switzerland" 
+- When country=Switzerland, verify ALL tenders have country="Switzerland"
+- Check platform_source for Swiss tenders should be "simap.ch (Schweiz)"
+
+**Platform Distribution Test:**
+- GET /api/tenders and check that platform_source includes: "Ausschreibungen Deutschland", "Vergabe Bayern", "simap.ch (Schweiz)", "Asklepios Kliniken"
+
+**Scraping Test:**
+- POST /api/scrape/all with Director auth - Should trigger comprehensive scraper
 """
 
 import requests
