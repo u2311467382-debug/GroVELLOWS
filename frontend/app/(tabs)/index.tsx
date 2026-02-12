@@ -184,23 +184,7 @@ export default function TendersScreen() {
       filtered = filtered.filter((tender) => tender.building_typology === selectedTypology);
     }
 
-    // Country filter
-    if (selectedCountry !== 'All') {
-      filtered = filtered.filter((tender) => {
-        // If country field exists, use it
-        if (tender.country) {
-          return tender.country === selectedCountry;
-        }
-        // Fallback: check platform_source for Switzerland indicators
-        if (selectedCountry === 'Switzerland') {
-          return tender.platform_source?.toLowerCase().includes('schweiz') || 
-                 tender.platform_source?.toLowerCase().includes('simap') ||
-                 tender.location?.toLowerCase().includes('schweiz');
-        }
-        // Default to Germany
-        return selectedCountry === 'Germany';
-      });
-    }
+    // Note: Country filter is handled by API call in fetchTenders
 
     // Sorting
     filtered.sort((a, b) => {
