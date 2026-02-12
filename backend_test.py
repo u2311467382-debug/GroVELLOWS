@@ -452,8 +452,41 @@ class GroVELLOWSTestSuite:
         
         end_time = time.time()
         
-        # Generate summary
-        self.generate_summary(end_time - start_time)
+    def generate_summary(self, duration: float):
+        """Generate test summary"""
+        print("\n" + "=" * 80)
+        print("🏁 GROVELLOWS TENDER TRACKING API TEST SUMMARY")
+        print("=" * 80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = sum(1 for result in self.test_results if result["success"])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: {passed_tests} ✅")
+        print(f"Failed: {failed_tests} ❌")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        print(f"Duration: {duration:.2f} seconds")
+        
+        if failed_tests > 0:
+            print(f"\n❌ FAILED TESTS ({failed_tests}):")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"  • {result['test']}: {result['details']}")
+        
+        print(f"\n✅ PASSED TESTS ({passed_tests}):")
+        for result in self.test_results:
+            if result["success"]:
+                print(f"  • {result['test']}: {result['details']}")
+        
+        # Save detailed results to file
+        with open("/app/test_results_detailed.json", "w") as f:
+            json.dump(self.test_results, f, indent=2, default=str)
+        
+        print(f"\nDetailed results saved to: /app/test_results_detailed.json")
+        
+        # Return success status
+        return failed_tests == 0
 
 if __name__ == "__main__":
     test_suite = GroVELLOWSTestSuite()
