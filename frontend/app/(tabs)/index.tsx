@@ -451,21 +451,6 @@ export default function TendersScreen() {
             <Text style={[styles.quickFilterText, sortBy !== 'date_desc' && styles.quickFilterTextActive]}>Sort</Text>
           </TouchableOpacity>
           
-          {/* Country Filters */}
-          <TouchableOpacity
-            style={[styles.quickFilterChip, selectedCountry === 'Germany' && styles.quickFilterChipActive]}
-            onPress={() => setSelectedCountry(selectedCountry === 'Germany' ? 'All' : 'Germany')}
-          >
-            <Text style={[styles.quickFilterText, selectedCountry === 'Germany' && styles.quickFilterTextActive]}>🇩🇪 Germany</Text>
-          </TouchableOpacity>
-          
-          <TouchableOpacity
-            style={[styles.quickFilterChip, selectedCountry === 'Switzerland' && styles.quickFilterChipActive]}
-            onPress={() => setSelectedCountry(selectedCountry === 'Switzerland' ? 'All' : 'Switzerland')}
-          >
-            <Text style={[styles.quickFilterText, selectedCountry === 'Switzerland' && styles.quickFilterTextActive]}>🇨🇭 Switzerland</Text>
-          </TouchableOpacity>
-          
           <TouchableOpacity
             style={[styles.quickFilterChip, selectedStatus !== 'All' && styles.quickFilterChipActive]}
             onPress={() => setSelectedStatus(selectedStatus === 'All' ? 'New' : 'All')}
@@ -501,7 +486,7 @@ export default function TendersScreen() {
             <Text style={[styles.quickFilterText, viewMode === 'compact' && styles.quickFilterTextActive]}>View</Text>
           </TouchableOpacity>
 
-          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || selectedCountry !== 'All' || searchQuery) && (
+          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || searchQuery) && (
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
               <Ionicons name="close" size={14} color={colors.error} />
               <Text style={styles.clearButtonText}>Clear</Text>
