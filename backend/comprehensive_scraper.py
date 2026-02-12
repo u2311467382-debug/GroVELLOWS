@@ -125,6 +125,38 @@ class ComprehensiveScraper:
         }
         self.seen_tenders = {}  # For deduplication
     
+    def is_tender_in_date_range(self, publication_date: datetime) -> bool:
+        """Check if tender publication date is >= MIN_PUBLICATION_DATE (Jan 1, 2025)"""
+        if publication_date is None:
+            # If no date available, assume it's recent and include it
+            return True
+        return publication_date >= self.MIN_PUBLICATION_DATE
+    
+    def extract_publication_date(self, text: str) -> datetime:
+        """Extract publication date from text. Returns None if not found."""
+        # Common date patterns in German tender portals
+        patterns = [
+            r'(\d{1,2}\.\d{1,2}\.20[2-9]\d)',  # DD.MM.YYYY format with year 2020+
+            r'(\d{1,2}\.\d{1,2}\.20[2-9]\d)',  # Similar
+            r'(\d{4}[-/]\d{1,2}[-/]\d{1,2})',  # YYYY-MM-DD format
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text)
+            if match:
+                date_str = match.group(1)
+                try:
+                    if '.' in date_str:
+                        return datetime.strptime(date_str, '%d.%m.%Y')
+                    elif '-' in date_str:
+                        return datetime.strptime(date_str, '%Y-%m-%d')
+                    elif '/' in date_str:
+                        return datetime.strptime(date_str, '%Y/%m/%d')
+                except:
+                    pass
+        
+        return None
+    
     def normalize_title(self, title: str) -> str:
         """Normalize title for deduplication"""
         # Remove special characters, lowercase, remove extra spaces
