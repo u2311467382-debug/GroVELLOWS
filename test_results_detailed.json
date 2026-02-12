@@ -3,105 +3,105 @@
     "test": "Director Login",
     "success": true,
     "details": "Role: Director, Token received",
-    "timestamp": "2026-02-12T09:29:58.651026",
+    "timestamp": "2026-02-12T14:11:25.337554",
     "response_data": null
   },
   {
     "test": "Regular User Login",
     "success": false,
     "details": "Status: 401, Response: {\"detail\":\"Invalid credentials\"}",
-    "timestamp": "2026-02-12T09:29:58.702651",
+    "timestamp": "2026-02-12T14:11:25.353093",
     "response_data": null
   },
   {
     "test": "Total Tenders Count (~237)",
-    "success": true,
-    "details": "Found 237 tenders (expected ~237)",
-    "timestamp": "2026-02-12T09:29:58.731444",
+    "success": false,
+    "details": "Found 814 tenders, expected ~237 (range 230-250)",
+    "timestamp": "2026-02-12T14:11:25.422746",
     "response_data": null
   },
   {
     "test": "German Tenders Count (~231)",
-    "success": true,
-    "details": "Found 231 German tenders (expected ~231)",
-    "timestamp": "2026-02-12T09:29:58.758158",
+    "success": false,
+    "details": "Found 814 German tenders, expected ~231 (range 225-240)",
+    "timestamp": "2026-02-12T14:11:25.535804",
     "response_data": null
   },
   {
     "test": "German Filter Exclusivity (NO Swiss)",
     "success": true,
     "details": "German filter correctly excludes all Swiss tenders",
-    "timestamp": "2026-02-12T09:29:58.758205",
+    "timestamp": "2026-02-12T14:11:25.535933",
     "response_data": null
   },
   {
     "test": "German Filter Purity",
     "success": true,
     "details": "All tenders in German filter have country='Germany'",
-    "timestamp": "2026-02-12T09:29:58.758222",
+    "timestamp": "2026-02-12T14:11:25.535989",
     "response_data": null
   },
   {
     "test": "Swiss Tenders Count (exactly 6)",
-    "success": true,
-    "details": "Found exactly 6 Swiss tenders",
-    "timestamp": "2026-02-12T09:29:58.773125",
+    "success": false,
+    "details": "Found 0 Swiss tenders, expected exactly 6",
+    "timestamp": "2026-02-12T14:11:25.548508",
     "response_data": null
   },
   {
     "test": "Swiss Filter Exclusivity",
     "success": true,
     "details": "All tenders in Swiss filter have country='Switzerland'",
-    "timestamp": "2026-02-12T09:29:58.773151",
+    "timestamp": "2026-02-12T14:11:25.548541",
     "response_data": null
   },
   {
     "test": "Swiss Platform Source (simap.ch Schweiz)",
-    "success": true,
-    "details": "Found 6 tenders from 'simap.ch (Schweiz)' platform",
-    "timestamp": "2026-02-12T09:29:58.773160",
+    "success": false,
+    "details": "No tenders found from 'simap.ch (Schweiz)'. Platforms: set()",
+    "timestamp": "2026-02-12T14:11:25.548552",
     "response_data": null
   },
   {
     "test": "Required Platform Distribution",
     "success": true,
-    "details": "Found 4/4 required platforms: ['Ausschreibungen Deutschland', 'Vergabe Bayern', 'simap.ch (Schweiz)', 'Asklepios Kliniken']",
-    "timestamp": "2026-02-12T09:29:58.796157",
+    "details": "Found 3/4 required platforms: ['Ausschreibungen Deutschland', 'Vergabe Bayern', 'Asklepios Kliniken']",
+    "timestamp": "2026-02-12T14:11:25.606101",
     "response_data": null
   },
   {
     "test": "Scrape Status Endpoint",
     "success": true,
     "details": "Status retrieved: Status available",
-    "timestamp": "2026-02-12T09:29:58.809643",
+    "timestamp": "2026-02-12T14:11:25.669369",
     "response_data": null
   },
   {
     "test": "Comprehensive Scraper Trigger",
     "success": true,
     "details": "Scraping completed successfully: Comprehensive scraping complete",
-    "timestamp": "2026-02-12T09:31:29.657703",
+    "timestamp": "2026-02-12T14:15:40.103924",
     "response_data": null
   },
   {
     "test": "Scraper Execution",
     "success": true,
     "details": "Scraper executed and found 0 new tenders",
-    "timestamp": "2026-02-12T09:31:29.657732",
+    "timestamp": "2026-02-12T14:15:40.103953",
     "response_data": null
   },
   {
     "test": "Required Fields Verification",
     "success": true,
     "details": "All required fields present in 50 tested tenders",
-    "timestamp": "2026-02-12T09:31:29.657787",
+    "timestamp": "2026-02-12T14:15:40.104000",
     "response_data": null
   },
   {
     "test": "Country Field Diversity",
-    "success": true,
-    "details": "Found both Germany and Switzerland in country fields: {'Germany', 'Switzerland'}",
-    "timestamp": "2026-02-12T09:31:29.657849",
+    "success": false,
+    "details": "Missing expected countries. Found: {'Germany'}",
+    "timestamp": "2026-02-12T14:15:40.104137",
     "response_data": null
   }
 ]
