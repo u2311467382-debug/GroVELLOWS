@@ -325,19 +325,28 @@ class ComprehensiveScraper:
     # ==================== GERMAN FEDERAL PLATFORMS ====================
     
     async def scrape_bund_de(self) -> list:
-        """Scrape SERVICE.BUND.DE - Federal tenders"""
+        """Scrape SERVICE.BUND.DE - Federal tenders with pagination"""
         tenders = []
-        urls = [
-            "https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Formular.html?nn=4641514&cl2Categories_Typ=vergabe",
-            "https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html"
-        ]
+        seen_tender_ids = set()
         
-        for url in urls:
-            html = await self.fetch_page(url)
-            if html:
+        # Paginated URLs
+        for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
+            urls = [
+                f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?nn=4641514&cl2Categories_Typ=vergabe&pageNo={page_num}"
+            ]
+            
+            for url in urls:
+                html = await self.fetch_page(url)
+                if not html:
+                    continue
+                    
                 soup = BeautifulSoup(html, 'lxml')
                 items = soup.select('.searchResult, .result-item, article, .c-teaser')
-                logger.info(f"Bund.de: Found {len(items)} items")
+                
+                if len(items) == 0:
+                    break
+                    
+                logger.info(f"Bund.de (page {page_num}): Found {len(items)} items")
                 
                 for item in items:
                     title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline')
@@ -348,17 +357,33 @@ class ComprehensiveScraper:
                             if link and not link.startswith('http'):
                                 link = f"https://www.service.bund.de{link}"
                             
-                            desc_elem = item.select_one('.description, p, .c-teaser__text')
-                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            # Extract tender ID from link
+                            tender_id = None
+                            id_match = re.search(r'/(\d{5,10})(?:/|$|\?|\.)', link)
+                            if id_match:
+                                tender_id = id_match.group(1)
                             
-                            cat_info = self.categorize_tender(title, description)
-                            budget = self.extract_budget(f"{title} {description}")
+                            # Skip duplicates
+                            if tender_id and tender_id in seen_tender_ids:
+                                continue
+                            if tender_id:
+                                seen_tender_ids.add(tender_id)
+                            
+                            desc_elem = item.select_one('.description, p, .c-teaser__text')
+                            original_desc = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            # Build description with Tender ID
+                            description = f"Bund-ID: {tender_id} | {original_desc or title}" if tender_id else (original_desc or f"Bundesausschreibung: {title}")
+                            
+                            cat_info = self.categorize_tender(title, original_desc)
+                            budget = self.extract_budget(f"{title} {original_desc}")
                             
                             tenders.append({
                                 'title': title,
-                                'description': description or f"Bundesausschreibung: {title}",
+                                'description': description,
+                                'tender_id': tender_id,
                                 'budget': budget,
-                                'deadline': self.extract_deadline(f"{title} {description}"),
+                                'deadline': self.extract_deadline(f"{title} {original_desc}"),
                                 'location': 'Deutschland',
                                 'project_type': 'Federal Tender',
                                 'contracting_authority': 'Bundesrepublik Deutschland',
@@ -369,7 +394,10 @@ class ComprehensiveScraper:
                                 'direct_link': link,
                                 'country': 'Germany',
                             })
+            
+            await asyncio.sleep(0.3)
         
+        logger.info(f"Bund.de TOTAL: {len(tenders)} tenders (from {self.PAGES_TO_SCRAPE} pages)")
         return tenders
 
     async def scrape_evergabe_online(self) -> list:
