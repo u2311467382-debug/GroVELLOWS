@@ -348,6 +348,42 @@ backend:
         agent: "testing"
         comment: "Security features working correctly. Role-based permissions enforced - Directors can scrape, regular users blocked (403). Authentication required for all endpoints. Invalid tokens properly rejected (401). Input validation working for application status updates."
 
+  - task: "Tender ID (Ausschreibungs-ID) in Descriptions"
+    implemented: true
+    working: true
+    file: "comprehensive_scraper.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added Ausschreibungs-ID/Tender ID extraction for all scrapers. German tenders show 'Ausschreibungs-ID: XXXXXXX | Title' format, Swiss tenders show 'Meldungsnummer: XXXXXXX | Title' format. 777 out of 814 tenders now have tender IDs in descriptions for easy verification."
+
+  - task: "Scraper Pagination (5 pages per platform)"
+    implemented: true
+    working: true
+    file: "comprehensive_scraper.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented 5-page pagination for ausschreibungen-deutschland.de, increasing tender capture from ~160 to 800+ tenders. Each state is scraped for 5 pages using /State/N/ URL pattern. Also added pagination for DTVP and Bund.de scrapers."
+
+  - task: "Tender Date Filtering (2025+ only)"
+    implemented: true
+    working: true
+    file: "comprehensive_scraper.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added MIN_PUBLICATION_DATE = Jan 1, 2025 filter. Tenders published before 2025 are automatically filtered out during scraping to avoid archive/old tenders. Extraction based on year in URL (/_2025_Berlin format)."
+
 frontend:
   - task: "Authentication Screens"
     implemented: true
