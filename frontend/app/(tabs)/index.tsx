@@ -68,8 +68,11 @@ const CATEGORIES = [
   'Kostenmanagement',
   'Projektmanagement',
   'Projektsteuerung',
+  'Projektsteuerungsleistungen',
   'Projektcontrolling',
   'Beschaffungsmanagement',
+  'Bauwesen',
+  'Building Construction',
   'General'
 ];
 
