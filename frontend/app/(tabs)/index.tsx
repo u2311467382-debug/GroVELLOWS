@@ -685,6 +685,44 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  titleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+    backgroundColor: colors.primary,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.textWhite,
+  },
+  countryFlagsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  flagButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  flagButtonActive: {
+    backgroundColor: colors.secondary,
+    borderColor: colors.secondary,
+  },
+  flagText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textWhite,
+  },
+  flagEmoji: {
+    fontSize: 18,
+  },
   header: {
     backgroundColor: colors.card,
     paddingHorizontal: 16,
