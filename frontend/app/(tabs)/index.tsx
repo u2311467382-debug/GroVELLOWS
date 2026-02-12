@@ -701,7 +701,8 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: colors.secondary,  // Ochre/Gold color
+    fontFamily: typography.fontFamily,
+    color: '#A07D50',  // Exact ochre/gold color
   },
   countryFlagsContainer: {
     flexDirection: 'row',
