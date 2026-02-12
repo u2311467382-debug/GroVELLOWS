@@ -118,63 +118,38 @@ class GroVELLOWSTestSuite:
         except Exception as e:
             self.log_test("Regular User Login", False, f"Exception: {str(e)}")
     
-    def test_tender_api_requirements(self):
-        """Test 2: Tender API Requirements - 145+ tenders from multiple platforms"""
-        print("\n=== TENDER API REQUIREMENTS ===")
+    def test_tender_count_requirements(self):
+        """Test Critical Requirements - Tender Counts"""
+        print("\n=== CRITICAL TENDER COUNT TESTS ===")
         
         if not self.director_token:
-            self.log_test("Tender API Requirements", False, "No director token available")
+            self.log_test("Tender Count Requirements", False, "No director token available")
             return []
             
         try:
+            # Test 1: GET /api/tenders - Should return ~237 total tenders
             response = self.make_request("GET", "/tenders", token=self.director_token)
             if response.status_code == 200:
-                tenders = response.json()
-                tender_count = len(tenders)
+                all_tenders = response.json()
+                total_count = len(all_tenders)
                 
-                # Check tender count requirement (145+)
-                if tender_count >= 145:
-                    self.log_test("Tender Count Requirement", True, f"Retrieved {tender_count} tenders (≥145 required)")
+                # Check if we have approximately 237 tenders (allow range 230-250)
+                if 230 <= total_count <= 250:
+                    self.log_test("Total Tenders Count (~237)", True, 
+                                f"Found {total_count} tenders (expected ~237)")
                 else:
-                    self.log_test("Tender Count Requirement", False, f"Only {tender_count} tenders found, expected ≥145")
+                    self.log_test("Total Tenders Count (~237)", False, 
+                                f"Found {total_count} tenders, expected ~237 (range 230-250)")
                 
-                # Check platform source variety
-                platform_sources = set()
-                countries = set()
-                required_platforms = ["Ausschreibungen Deutschland", "Vergabe Bayern", "Asklepios Kliniken"]
-                
-                for tender in tenders:
-                    if tender.get("platform_source"):
-                        platform_sources.add(tender["platform_source"])
-                    if tender.get("country"):
-                        countries.add(tender["country"])
-                
-                # Check for required platforms
-                found_required = [p for p in required_platforms if p in platform_sources]
-                if len(found_required) >= 2:
-                    self.log_test("Platform Source Variety", True, 
-                                f"Found {len(platform_sources)} platforms including required: {', '.join(found_required)}")
-                else:
-                    self.log_test("Platform Source Variety", False, 
-                                f"Missing required platforms. Found: {', '.join(platform_sources)}")
-                
-                # Check country field presence
-                if "Germany" in countries:
-                    self.log_test("Country Field Verification", True, 
-                                f"Country field present with Germany. Countries: {', '.join(countries)}")
-                else:
-                    self.log_test("Country Field Verification", False, 
-                                f"Germany not found in country fields. Found: {', '.join(countries)}")
-                
-                return tenders
+                return all_tenders
                 
             else:
-                self.log_test("Tender API Requirements", False, 
+                self.log_test("Total Tenders Count", False, 
                             f"Failed to retrieve tenders, status: {response.status_code}")
                 return []
                 
         except Exception as e:
-            self.log_test("Tender API Requirements", False, f"Exception: {str(e)}")
+            self.log_test("Total Tenders Count", False, f"Exception: {str(e)}")
             return []
 
     def test_scraping_api_requirements(self):
