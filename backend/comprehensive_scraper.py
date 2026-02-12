@@ -484,56 +484,61 @@ class ComprehensiveScraper:
             if html:
                 soup = BeautifulSoup(html, 'lxml')
                 
-                # Find all tender links - they have specific URL pattern with IDs starting with 24
-                all_links = soup.select('a[href*="/24"], a[href*="/23"], a[href*="/22"]')
+                # Find ALL links on the page
+                all_links = soup.find_all('a', href=True)
                 items = []
                 
                 for link in all_links:
                     href = link.get('href', '')
-                    # Match tender URLs like /2439380_Deutschland__...
-                    if href and re.search(r'/2[0-9]{6}_', href):
+                    # Match tender URLs like /2439380_Deutschland__... or /2444419_Deutschland__...
+                    if href and re.match(r'^/2[0-9]{6}_', href):
                         items.append(link)
                 
-                logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} items")
+                logger.info(f"Ausschreibungen-Deutschland ({url}): Found {len(items)} tender links")
                 
-                # Increased limit to 50 per page to capture more tenders
-                for item in items[:50]:
+                # Process all found tenders (no artificial limit)
+                for item in items:
                     title = item.get_text(strip=True)
-                    # Reduced minimum length and use broader filter
-                    if len(title) > 15:
-                        link_href = item.get('href', '')
-                        if link_href and not link_href.startswith('http'):
-                            link_href = f"https://ausschreibungen-deutschland.de{link_href}"
+                    link_href = item.get('href', '')
+                    
+                    # Skip if title is too short or empty
+                    if len(title) < 10:
+                        continue
+                    
+                    if link_href and not link_href.startswith('http'):
+                        link_href = f"https://ausschreibungen-deutschland.de{link_href}"
+                    
+                    # More permissive filter - accept all construction-related tenders
+                    if self.is_relevant_tender(title):
+                        # Extract location from URL (e.g., _2026_Berlin)
+                        location_match = re.search(r'_(\d{4})_([A-Za-z-]+)$', link_href)
+                        location = location_match.group(2).replace('_', ' ').replace('-', ' ') if location_match else 'Deutschland'
                         
-                        # Check if relevant (using expanded filter)
-                        if self.is_relevant_tender(title):
-                            # Extract location from URL
-                            location_match = re.search(r'_(\d{4})_([^/]+)$', link_href)
-                            location = location_match.group(2).replace('_', ' ') if location_match else 'Deutschland'
-                            
-                            # Extract contracting authority from title if available
-                            authority = 'Öffentlicher Auftraggeber'
-                            if 'Messe Berlin' in title:
-                                authority = 'Messe Berlin GmbH'
-                            
-                            cat_info = self.categorize_tender(title)
-                            budget = self.extract_budget(title)
-                            
-                            tenders.append({
-                                'title': title[:250],  # Allow longer titles
-                                'description': f"Öffentliche Ausschreibung: {title[:200]}",
-                                'budget': budget,
-                                'deadline': self.extract_deadline(title),
-                                'location': location,
-                                'project_type': 'Public Tender',
-                                'contracting_authority': authority,
-                                'category': cat_info['category'] or 'Projektmanagement',
-                                'building_typology': cat_info['building_typology'],
-                                'platform_source': 'Ausschreibungen Deutschland',
-                                'platform_url': 'https://ausschreibungen-deutschland.de/',
-                                'direct_link': link_href,
-                                'country': 'Germany',
-                            })
+                        # Extract contracting authority from title if available
+                        authority = 'Öffentlicher Auftraggeber'
+                        if 'Messe Berlin' in title:
+                            authority = 'Messe Berlin GmbH'
+                        elif 'Charité' in title:
+                            authority = 'Charité – Universitätsmedizin Berlin'
+                        
+                        cat_info = self.categorize_tender(title)
+                        budget = self.extract_budget(title)
+                        
+                        tenders.append({
+                            'title': title[:300],
+                            'description': f"Öffentliche Ausschreibung: {title[:250]}",
+                            'budget': budget,
+                            'deadline': self.extract_deadline(title),
+                            'location': location,
+                            'project_type': 'Public Tender',
+                            'contracting_authority': authority,
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Ausschreibungen Deutschland',
+                            'platform_url': 'https://ausschreibungen-deutschland.de/',
+                            'direct_link': link_href,
+                            'country': 'Germany',
+                        })
             
             await asyncio.sleep(0.3)  # Rate limiting
         
