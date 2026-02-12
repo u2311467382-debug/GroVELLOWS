@@ -582,11 +582,12 @@ class ComprehensiveScraper:
         for base_url in state_base_urls:
             # Scrape multiple pages (pagination)
             for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
-                # Build paginated URL - ausschreibungen-deutschland.de uses /seite/N pattern
+                # Build paginated URL - ausschreibungen-deutschland.de uses /State/2/ pattern
                 if page_num == 1:
                     url = base_url
                 else:
-                    url = f"{base_url}/seite/{page_num}" if not base_url.endswith('/') else f"{base_url}seite/{page_num}"
+                    # Pagination format: /Berlin/2/ or /Bayern/3/ etc.
+                    url = f"{base_url.rstrip('/')}/{page_num}/"
                 
                 html = await self.fetch_page(url)
                 if not html:
