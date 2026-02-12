@@ -109,6 +109,12 @@ PLATFORM_PRIORITY = {
 }
 
 class ComprehensiveScraper:
+    # Minimum publication date - only tenders published on or after this date will be saved
+    MIN_PUBLICATION_DATE = datetime(2025, 1, 1)
+    
+    # Number of pages to scrape per platform
+    PAGES_TO_SCRAPE = 5
+    
     def __init__(self, db):
         self.db = db
         self.session = None
