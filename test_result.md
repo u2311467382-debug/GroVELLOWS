@@ -390,6 +390,18 @@ backend:
         agent: "main"
         comment: "Added MIN_PUBLICATION_DATE = Jan 1, 2025 filter. Tenders published before 2025 are automatically filtered out during scraping to avoid archive/old tenders. Extraction based on year in URL (/_2025_Berlin format)."
 
+  - task: "GroVELLOWS Country Filtering Verification"
+    implemented: true
+    working: true
+    file: "server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "COUNTRY FILTERING VERIFIED: GET /api/tenders?country=Germany returns 816 German tenders (all exclusive), GET /api/tenders?country=Switzerland returns 0 Swiss tenders (none currently in database), German filter excludes ALL non-German tenders, Database structure confirmed with required fields (title, description, platform_source, country, location). Note: No Swiss tenders currently in database - all 816 tenders are German."
+
 frontend:
   - task: "Authentication Screens"
     implemented: true
