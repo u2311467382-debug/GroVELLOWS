@@ -30,7 +30,9 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 
 # Configuration
-BASE_URL = "https://buildtender-1.preview.emergentagent.com/api"
+import os
+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://buildtender-1.preview.emergentagent.com')
+BASE_URL = f"{BACKEND_URL}/api"
 
 # Test credentials from review request
 DIRECTOR_CREDENTIALS = {
