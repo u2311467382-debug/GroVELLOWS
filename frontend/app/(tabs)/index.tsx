@@ -113,9 +113,15 @@ export default function TendersScreen() {
     filterAndSortTenders();
   }, [tenders, searchQuery, selectedCategory, selectedStatus, selectedTypology, selectedCountry, sortBy]);
 
-  const fetchTenders = async () => {
+  const fetchTenders = async (country?: string) => {
     try {
-      const response = await api.get('/tenders');
+      const params = new URLSearchParams();
+      if (country && country !== 'All') {
+        params.append('country', country);
+      }
+      const queryString = params.toString();
+      const url = queryString ? `/tenders?${queryString}` : '/tenders';
+      const response = await api.get(url);
       setTenders(response.data);
     } catch (error) {
       console.error('Failed to fetch tenders:', error);
@@ -123,6 +129,12 @@ export default function TendersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const handleCountryChange = (country: string) => {
+    setSelectedCountry(country);
+    setLoading(true);
+    fetchTenders(country);
   };
 
   const onRefresh = useCallback(() => {
