@@ -110,7 +110,10 @@ PLATFORM_PRIORITY = {
 
 class ComprehensiveScraper:
     # Minimum publication date - only tenders published on or after this date will be saved
-    MIN_PUBLICATION_DATE = datetime(2025, 1, 1)
+    MIN_PUBLICATION_DATE = datetime(2026, 1, 1)
+    
+    # Maximum tender age in days (3 months = ~90 days)
+    MAX_TENDER_AGE_DAYS = 90
     
     # Number of pages to scrape per platform
     PAGES_TO_SCRAPE = 5
