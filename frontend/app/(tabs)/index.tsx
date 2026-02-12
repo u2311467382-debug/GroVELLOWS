@@ -481,8 +481,10 @@ export default function TendersScreen() {
             </TouchableOpacity>
           )}
         </ScrollView>
+      </View>
 
-        {/* Results Count */}
+      {/* Results Count */}
+      <View style={styles.resultsBar}>
         <Text style={styles.resultsCount}>
           {filteredTenders.length} {filteredTenders.length === 1 ? 'tender' : 'tenders'} found
         </Text>
