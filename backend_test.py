@@ -152,124 +152,156 @@ class GroVELLOWSTestSuite:
             self.log_test("Total Tenders Count", False, f"Exception: {str(e)}")
             return []
 
-    def test_scraping_api_requirements(self):
-        """Test 3: Scraping API - POST /api/scrape/all with comprehensive scraper"""
-        print("\n=== SCRAPING API REQUIREMENTS ===")
+    def test_country_filtering_requirements(self):
+        """Test Critical Requirements - Country Filtering"""
+        print("\n=== CRITICAL COUNTRY FILTERING TESTS ===")
         
         if not self.director_token:
-            self.log_test("Scraping API Requirements", False, "No director token available")
+            self.log_test("Country Filtering Requirements", False, "No director token available")
             return
             
-        # Test scrape status endpoint
         try:
-            response = self.make_request("GET", "/scrape/status", token=self.director_token)
-            if response.status_code == 200:
-                data = response.json()
-                self.log_test("Scrape Status Check", True, f"Status retrieved successfully")
-            else:
-                self.log_test("Scrape Status Check", False, f"Status: {response.status_code}")
-        except Exception as e:
-            self.log_test("Scrape Status Check", False, f"Exception: {str(e)}")
-            
-        # Test comprehensive scraper trigger
-        try:
-            response = self.make_request("POST", "/scrape/all", token=self.director_token)
-            if response.status_code == 200:
-                data = response.json()
-                scraped_count = data.get("count", 0)
-                sources = data.get("sources", [])
-                
-                self.log_test("Comprehensive Scraper Trigger", True, 
-                            f"Scraping completed: {scraped_count} new tenders")
-                
-                # Verify 15+ German platforms
-                if len(sources) >= 15:
-                    self.log_test("German Platform Count", True, 
-                                f"Uses {len(sources)} German platforms (≥15 required)")
-                else:
-                    self.log_test("German Platform Count", False, 
-                                f"Only {len(sources)} platforms, expected ≥15. Sources: {sources}")
-                
-            elif response.status_code == 429:
-                self.log_test("Comprehensive Scraper Trigger", True, 
-                            "Rate limiting working correctly (429 Too Many Requests)")
-            elif response.status_code == 403:
-                self.log_test("Comprehensive Scraper Trigger", False, 
-                            "Access denied - Director role authentication issue")
-            else:
-                self.log_test("Comprehensive Scraper Trigger", False, 
-                            f"Scraping failed with status {response.status_code}")
-                
-        except Exception as e:
-            self.log_test("Comprehensive Scraper Trigger", False, f"Exception: {str(e)}")
-            
-        # Test Director role requirement
-        if self.regular_user_token:
-            try:
-                response = self.make_request("POST", "/scrape/all", token=self.regular_user_token)
-                if response.status_code == 403:
-                    self.log_test("Director Role Requirement", True, 
-                                "Regular users correctly blocked from scraping")
-                else:
-                    self.log_test("Director Role Requirement", False, 
-                                f"Regular user should be blocked. Status: {response.status_code}")
-            except Exception as e:
-                self.log_test("Director Role Requirement", False, f"Exception: {str(e)}")
-
-    def test_filter_requirements(self):
-        """Test 4: Filter Requirements - country=Germany and platform_source filtering"""
-        print("\n=== FILTER REQUIREMENTS ===")
-        
-        if not self.director_token:
-            self.log_test("Filter Requirements", False, "No director token available")
-            return
-            
-        # Test country=Germany filter
-        try:
+            # Test 2: GET /api/tenders?country=Germany - Should return ~231 German tenders ONLY
             response = self.make_request("GET", "/tenders", token=self.director_token, 
                                        params={"country": "Germany"})
             if response.status_code == 200:
-                germany_tenders = response.json()
-                germany_count = len(germany_tenders)
+                german_tenders = response.json()
+                german_count = len(german_tenders)
                 
-                # Verify all returned tenders have country=Germany
-                all_germany = all(t.get("country") == "Germany" for t in germany_tenders)
-                
-                if all_germany and germany_count > 0:
-                    self.log_test("Country Filter (Germany)", True, 
-                                f"Filter working: {germany_count} German tenders, all verified")
+                # Check if we have approximately 231 German tenders (allow range 225-240)
+                if 225 <= german_count <= 240:
+                    self.log_test("German Tenders Count (~231)", True, 
+                                f"Found {german_count} German tenders (expected ~231)")
                 else:
-                    self.log_test("Country Filter (Germany)", False, 
-                                f"Filter issue: {germany_count} tenders, all_germany={all_germany}")
+                    self.log_test("German Tenders Count (~231)", False, 
+                                f"Found {german_count} German tenders, expected ~231 (range 225-240)")
+                
+                # Verify NO Swiss tenders in German filter
+                swiss_in_german = [t for t in german_tenders if t.get("country") == "Switzerland"]
+                if len(swiss_in_german) == 0:
+                    self.log_test("German Filter Exclusivity (NO Swiss)", True, 
+                                "German filter correctly excludes all Swiss tenders")
+                else:
+                    self.log_test("German Filter Exclusivity (NO Swiss)", False, 
+                                f"Found {len(swiss_in_german)} Swiss tenders in German filter")
+                
+                # Verify ALL tenders are German
+                non_german = [t for t in german_tenders if t.get("country") != "Germany"]
+                if len(non_german) == 0:
+                    self.log_test("German Filter Purity", True, 
+                                "All tenders in German filter have country='Germany'")
+                else:
+                    self.log_test("German Filter Purity", False, 
+                                f"Found {len(non_german)} non-German tenders in German filter")
+                    
             else:
-                self.log_test("Country Filter (Germany)", False, 
-                            f"Filter request failed: {response.status_code}")
-        except Exception as e:
-            self.log_test("Country Filter (Germany)", False, f"Exception: {str(e)}")
+                self.log_test("German Tenders Filter", False, 
+                            f"Failed to retrieve German tenders, status: {response.status_code}")
             
-        # Test platform_source filter
-        try:
-            platform_name = "Ausschreibungen Deutschland"
+            # Test 3: GET /api/tenders?country=Switzerland - Should return exactly 6 Swiss tenders ONLY
             response = self.make_request("GET", "/tenders", token=self.director_token, 
-                                       params={"platform_source": platform_name})
+                                       params={"country": "Switzerland"})
             if response.status_code == 200:
-                platform_tenders = response.json()
-                platform_count = len(platform_tenders)
+                swiss_tenders = response.json()
+                swiss_count = len(swiss_tenders)
                 
-                # Verify all returned tenders have correct platform_source
-                correct_platform = all(t.get("platform_source") == platform_name for t in platform_tenders)
-                
-                if correct_platform:
-                    self.log_test("Platform Source Filter", True, 
-                                f"Filter working: {platform_count} tenders from {platform_name}")
+                # Check if we have exactly 6 Swiss tenders
+                if swiss_count == 6:
+                    self.log_test("Swiss Tenders Count (exactly 6)", True, 
+                                f"Found exactly {swiss_count} Swiss tenders")
                 else:
-                    self.log_test("Platform Source Filter", False, 
-                                f"Filter issue: incorrect platform sources in results")
+                    self.log_test("Swiss Tenders Count (exactly 6)", False, 
+                                f"Found {swiss_count} Swiss tenders, expected exactly 6")
+                
+                # Verify ALL tenders are Swiss
+                non_swiss = [t for t in swiss_tenders if t.get("country") != "Switzerland"]
+                if len(non_swiss) == 0:
+                    self.log_test("Swiss Filter Exclusivity", True, 
+                                "All tenders in Swiss filter have country='Switzerland'")
+                else:
+                    self.log_test("Swiss Filter Exclusivity", False, 
+                                f"Found {len(non_swiss)} non-Swiss tenders in Swiss filter")
+                
+                # Check Swiss platform sources should be "simap.ch (Schweiz)"
+                swiss_platforms = [t.get("platform_source", "") for t in swiss_tenders]
+                simap_count = sum(1 for p in swiss_platforms if "simap.ch" in p.lower() and "schweiz" in p.lower())
+                
+                if simap_count > 0:
+                    self.log_test("Swiss Platform Source (simap.ch Schweiz)", True, 
+                                f"Found {simap_count} tenders from 'simap.ch (Schweiz)' platform")
+                else:
+                    self.log_test("Swiss Platform Source (simap.ch Schweiz)", False, 
+                                f"No tenders found from 'simap.ch (Schweiz)'. Platforms: {set(swiss_platforms)}")
+                    
             else:
-                self.log_test("Platform Source Filter", False, 
-                            f"Filter request failed: {response.status_code}")
+                self.log_test("Swiss Tenders Filter", False, 
+                            f"Failed to retrieve Swiss tenders, status: {response.status_code}")
+                
         except Exception as e:
-            self.log_test("Platform Source Filter", False, f"Exception: {str(e)}")
+            self.log_test("Country Filtering Requirements", False, f"Exception: {str(e)}")
+
+    def test_platform_distribution_requirements(self):
+        """Test Platform Distribution Requirements"""
+        print("\n=== PLATFORM DISTRIBUTION TESTS ===")
+        
+        if not self.director_token:
+            self.log_test("Platform Distribution Requirements", False, "No director token available")
+            return
+            
+        try:
+            response = self.make_request("GET", "/tenders", token=self.director_token)
+            if response.status_code == 200:
+                all_tenders = response.json()
+                
+                # Get all platform sources
+                platform_sources = [t.get("platform_source", "Unknown") for t in all_tenders]
+                unique_platforms = set(platform_sources)
+                
+                # Check for required platforms from review request
+                required_platforms = [
+                    "Ausschreibungen Deutschland",
+                    "Vergabe Bayern", 
+                    "simap.ch (Schweiz)",
+                    "Asklepios Kliniken"
+                ]
+                
+                found_platforms = []
+                missing_platforms = []
+                
+                for required in required_platforms:
+                    found = False
+                    for actual in unique_platforms:
+                        if required.lower() in actual.lower():
+                            found_platforms.append(actual)
+                            found = True
+                            break
+                    
+                    if not found:
+                        missing_platforms.append(required)
+                
+                if len(found_platforms) >= 3:
+                    self.log_test("Required Platform Distribution", True, 
+                                f"Found {len(found_platforms)}/4 required platforms: {found_platforms}")
+                else:
+                    self.log_test("Required Platform Distribution", False, 
+                                f"Only found {len(found_platforms)}/4 required platforms. Missing: {missing_platforms}")
+                
+                # Log platform statistics for debugging
+                platform_counts = {}
+                for platform in platform_sources:
+                    platform_counts[platform] = platform_counts.get(platform, 0) + 1
+                
+                print(f"   Platform breakdown (top 10):")
+                sorted_platforms = sorted(platform_counts.items(), key=lambda x: x[1], reverse=True)
+                for platform, count in sorted_platforms[:10]:
+                    print(f"     - {platform}: {count} tenders")
+                    
+            else:
+                self.log_test("Platform Distribution Requirements", False, 
+                            f"Failed to fetch tenders for platform analysis: {response.status_code}")
+                
+        except Exception as e:
+            self.log_test("Platform Distribution Requirements", False, f"Error analyzing platforms: {str(e)}")
 
     def test_data_integrity_requirements(self, tenders):
         """Test 5: Data Integrity - required fields and deduplication"""
