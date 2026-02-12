@@ -375,27 +375,21 @@ export default function TendersScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Main Header with Title, Flags, and Search */}
+      {/* Main Header with Title and Country Flags */}
       <View style={styles.mainHeader}>
         {/* Title Row with Flags */}
         <View style={styles.titleRow}>
           <Text style={styles.headerTitle}>Tenders</Text>
           <View style={styles.countryFlagsContainer}>
             <TouchableOpacity
-              style={[styles.flagButton, selectedCountry === 'All' && styles.flagButtonActive]}
-              onPress={() => handleCountryChange('All')}
-            >
-              <Text style={[styles.flagText, selectedCountry === 'All' && styles.flagTextActive]}>All</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
               style={[styles.flagButton, selectedCountry === 'Germany' && styles.flagButtonActive]}
-              onPress={() => handleCountryChange('Germany')}
+              onPress={() => handleCountryChange(selectedCountry === 'Germany' ? 'All' : 'Germany')}
             >
               <Text style={styles.flagEmoji}>🇩🇪</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.flagButton, selectedCountry === 'Switzerland' && styles.flagButtonActive]}
-              onPress={() => handleCountryChange('Switzerland')}
+              onPress={() => handleCountryChange(selectedCountry === 'Switzerland' ? 'All' : 'Switzerland')}
             >
               <Text style={styles.flagEmoji}>🇨🇭</Text>
             </TouchableOpacity>
@@ -405,17 +399,17 @@ export default function TendersScreen() {
         {/* Search Row */}
         <View style={styles.searchRow}>
           <View style={styles.searchContainer}>
-            <Ionicons name="search" size={18} color="#FFFFFF80" />
+            <Ionicons name="search" size={16} color="#FFFFFF60" />
             <TextInput
               style={styles.searchInput}
               placeholder={t('tenders.search')}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              placeholderTextColor="#FFFFFF80"
+              placeholderTextColor="#FFFFFF60"
             />
             {searchQuery ? (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Ionicons name="close-circle" size={18} color="#FFFFFF80" />
+                <Ionicons name="close-circle" size={16} color="#FFFFFF60" />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -423,7 +417,7 @@ export default function TendersScreen() {
             style={styles.filterButton}
             onPress={() => setShowFilters(true)}
           >
-            <Ionicons name="options" size={22} color="#FFFFFF" />
+            <Ionicons name="options" size={20} color="#FFFFFF" />
             {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All') && (
               <View style={styles.filterDot} />
             )}
