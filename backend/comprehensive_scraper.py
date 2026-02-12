@@ -1719,89 +1719,101 @@ class ComprehensiveScraper:
     # ==================== SWISS PLATFORM ====================
 
     async def scrape_simap_switzerland(self) -> list:
-        """Scrape simap.ch Switzerland using Playwright browser automation for real data"""
+        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data from archive"""
         tenders = []
         
         try:
             from playwright.async_api import async_playwright
             
-            logger.info("simap.ch: Starting Playwright browser automation for real Swiss tenders...")
+            logger.info("simap.ch: Starting Playwright browser automation for REAL Swiss tenders from archive...")
             
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
-                context = await browser.new_context(
-                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                    locale='de-CH'
-                )
-                page = await context.new_page()
+                page = await browser.new_page(viewport={'width': 1920, 'height': 1080})
                 
-                # Navigate to SIMAP search page
-                await page.goto('https://www.simap.ch/de/suche', wait_until='networkidle', timeout=30000)
-                await page.wait_for_timeout(3000)
-                
-                # Try to search for construction-related tenders
-                search_terms = ['Projektsteuerung', 'Bauleitung', 'Baumanagement', 'Hochbau']
+                # Search for multiple construction-related terms
+                search_terms = ['Projektsteuerung', 'Bauleitung', 'Baumanagement', 'Hochbau', 'Architektur']
                 
                 for term in search_terms:
                     try:
-                        # Look for search input
-                        search_input = page.locator('input[type="text"], input[type="search"], input[placeholder*="Such"]').first
-                        if await search_input.is_visible(timeout=5000):
-                            await search_input.fill(term)
-                            await page.wait_for_timeout(1000)
-                            
-                            # Try to click search button or press Enter
-                            search_btn = page.locator('button[type="submit"], button:has-text("Suchen"), button:has-text("Search")').first
-                            if await search_btn.is_visible(timeout=2000):
-                                await search_btn.click()
-                            else:
-                                await search_input.press('Enter')
-                            
-                            await page.wait_for_timeout(3000)
-                            
-                            # Extract results
-                            results = await page.locator('article, .result-item, .tender-item, [class*="publication"], tr').all()
-                            logger.info(f"simap.ch ({term}): Found {len(results)} potential results")
-                            
-                            for result in results[:20]:
-                                try:
-                                    title_text = await result.inner_text()
-                                    title_text = title_text.strip()
+                        # Navigate to archive search
+                        await page.goto('https://archiv.simap.ch', wait_until='networkidle', timeout=30000)
+                        await page.wait_for_timeout(2000)
+                        
+                        # Fill in search keyword
+                        keyword_input = page.locator('input').first
+                        await keyword_input.fill(term)
+                        await page.wait_for_timeout(500)
+                        
+                        # Click search button
+                        search_btn = page.locator('button:has-text("Suchen")').first
+                        await search_btn.click()
+                        await page.wait_for_timeout(4000)
+                        
+                        # Get the table rows with results
+                        rows = await page.locator('table tbody tr, tr').all()
+                        logger.info(f"simap.ch ({term}): Found {len(rows)} result rows")
+                        
+                        for row in rows[:15]:  # Limit per search term
+                            try:
+                                text = await row.inner_text()
+                                text = text.strip()
+                                
+                                # Skip header rows or empty rows
+                                if len(text) < 30 or ('Datum' in text and 'Nr.' in text):
+                                    continue
+                                
+                                # Parse the tender info from row text
+                                lines = text.split('\n')
+                                
+                                # Get the tender title
+                                title = None
+                                for line in lines:
+                                    line = line.strip()
+                                    if len(line) > 30 and not line[0].isdigit() and 'CPV:' not in line and 'Gesamtansicht' not in line:
+                                        title = line
+                                        break
+                                
+                                if title and self.is_relevant_tender(title):
+                                    # Get link if available
+                                    link_elem = row.locator('a').first
+                                    link = 'https://archiv.simap.ch/result'
+                                    if await link_elem.count() > 0:
+                                        href = await link_elem.get_attribute('href') or ''
+                                        if href:
+                                            link = f'https://archiv.simap.ch{href}' if not href.startswith('http') else href
                                     
-                                    if len(title_text) > 20 and self.is_relevant_tender(title_text):
-                                        # Try to get the link
-                                        link_elem = result.locator('a').first
-                                        link = ''
-                                        if await link_elem.count() > 0:
-                                            link = await link_elem.get_attribute('href') or ''
-                                            if link and not link.startswith('http'):
-                                                link = f"https://www.simap.ch{link}"
-                                        
-                                        cat_info = self.categorize_tender(title_text)
-                                        
+                                    # Extract authority from text
+                                    authority = 'Schweizer Öffentlicher Auftraggeber'
+                                    for line in lines:
+                                        line = line.strip()
+                                        if any(kw in line for kw in ['Bundesamt', 'Kanton', 'Stadt', 'Gemeinde', 'SBB', 'ETH', 'Universität']):
+                                            authority = line
+                                            break
+                                    
+                                    cat_info = self.categorize_tender(title)
+                                    
+                                    # Check if this tender already exists (dedup by title)
+                                    if not any(t['title'] == title for t in tenders):
                                         tenders.append({
-                                            'title': title_text[:500],
-                                            'description': title_text,
-                                            'budget': self.extract_budget(title_text),
-                                            'deadline': self.extract_deadline(title_text),
+                                            'title': title,  # EXACT title from portal
+                                            'description': title,  # Same as title for authenticity
+                                            'budget': self.extract_budget(text),
+                                            'deadline': self.extract_deadline(text),
                                             'location': 'Schweiz',
                                             'project_type': 'Public Tender',
-                                            'contracting_authority': 'Schweizer Öffentlicher Auftraggeber',
+                                            'contracting_authority': authority,
                                             'category': cat_info['category'] or 'Projektmanagement',
                                             'building_typology': cat_info['building_typology'],
                                             'platform_source': 'simap.ch (Schweiz)',
-                                            'platform_url': 'https://www.simap.ch',
-                                            'direct_link': link or 'https://www.simap.ch/de/suche',
+                                            'platform_url': 'https://archiv.simap.ch',
+                                            'direct_link': link,
                                             'country': 'Switzerland',
                                         })
-                                except Exception as e:
-                                    logger.debug(f"Error extracting result: {e}")
-                                    continue
-                            
-                            # Clear search for next term
-                            await search_input.fill('')
-                            await page.wait_for_timeout(500)
-                            
+                            except Exception as e:
+                                logger.debug(f"Error parsing row: {e}")
+                                continue
+                        
                     except Exception as e:
                         logger.warning(f"simap.ch search error for '{term}': {e}")
                         continue
@@ -1813,7 +1825,7 @@ class ComprehensiveScraper:
         except Exception as e:
             logger.error(f"simap.ch Playwright error: {e}")
         
-        logger.info(f"simap.ch: Found {len(tenders)} real Swiss tenders")
+        logger.info(f"simap.ch: Found {len(tenders)} REAL Swiss tenders")
         return tenders
 
     # ==================== DEDUPLICATION ====================
