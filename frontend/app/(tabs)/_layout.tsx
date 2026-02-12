@@ -32,6 +32,7 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: t('tenders.title'),
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="document-text" size={20} color={color} />
           ),
