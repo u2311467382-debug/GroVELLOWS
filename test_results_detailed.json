@@ -3,84 +3,105 @@
     "test": "Director Login",
     "success": true,
     "details": "Role: Director, Token received",
-    "timestamp": "2026-02-11T10:21:45.524092",
+    "timestamp": "2026-02-12T09:29:58.651026",
     "response_data": null
   },
   {
     "test": "Regular User Login",
     "success": false,
     "details": "Status: 401, Response: {\"detail\":\"Invalid credentials\"}",
-    "timestamp": "2026-02-11T10:21:45.578092",
+    "timestamp": "2026-02-12T09:29:58.702651",
     "response_data": null
   },
   {
-    "test": "Tender Count Requirement",
-    "success": false,
-    "details": "Only 129 tenders found, expected \u2265145",
-    "timestamp": "2026-02-11T10:21:45.601850",
-    "response_data": null
-  },
-  {
-    "test": "Platform Source Variety",
+    "test": "Total Tenders Count (~237)",
     "success": true,
-    "details": "Found 6 platforms including required: Ausschreibungen Deutschland, Vergabe Bayern, Asklepios Kliniken",
-    "timestamp": "2026-02-11T10:21:45.601895",
+    "details": "Found 237 tenders (expected ~237)",
+    "timestamp": "2026-02-12T09:29:58.731444",
     "response_data": null
   },
   {
-    "test": "Country Field Verification",
-    "success": false,
-    "details": "Germany not found in country fields. Found: ",
-    "timestamp": "2026-02-11T10:21:45.601902",
-    "response_data": null
-  },
-  {
-    "test": "Scrape Status Check",
+    "test": "German Tenders Count (~231)",
     "success": true,
-    "details": "Status retrieved successfully",
-    "timestamp": "2026-02-11T10:21:45.656769",
+    "details": "Found 231 German tenders (expected ~231)",
+    "timestamp": "2026-02-12T09:29:58.758158",
+    "response_data": null
+  },
+  {
+    "test": "German Filter Exclusivity (NO Swiss)",
+    "success": true,
+    "details": "German filter correctly excludes all Swiss tenders",
+    "timestamp": "2026-02-12T09:29:58.758205",
+    "response_data": null
+  },
+  {
+    "test": "German Filter Purity",
+    "success": true,
+    "details": "All tenders in German filter have country='Germany'",
+    "timestamp": "2026-02-12T09:29:58.758222",
+    "response_data": null
+  },
+  {
+    "test": "Swiss Tenders Count (exactly 6)",
+    "success": true,
+    "details": "Found exactly 6 Swiss tenders",
+    "timestamp": "2026-02-12T09:29:58.773125",
+    "response_data": null
+  },
+  {
+    "test": "Swiss Filter Exclusivity",
+    "success": true,
+    "details": "All tenders in Swiss filter have country='Switzerland'",
+    "timestamp": "2026-02-12T09:29:58.773151",
+    "response_data": null
+  },
+  {
+    "test": "Swiss Platform Source (simap.ch Schweiz)",
+    "success": true,
+    "details": "Found 6 tenders from 'simap.ch (Schweiz)' platform",
+    "timestamp": "2026-02-12T09:29:58.773160",
+    "response_data": null
+  },
+  {
+    "test": "Required Platform Distribution",
+    "success": true,
+    "details": "Found 4/4 required platforms: ['Ausschreibungen Deutschland', 'Vergabe Bayern', 'simap.ch (Schweiz)', 'Asklepios Kliniken']",
+    "timestamp": "2026-02-12T09:29:58.796157",
+    "response_data": null
+  },
+  {
+    "test": "Scrape Status Endpoint",
+    "success": true,
+    "details": "Status retrieved: Status available",
+    "timestamp": "2026-02-12T09:29:58.809643",
     "response_data": null
   },
   {
     "test": "Comprehensive Scraper Trigger",
     "success": true,
-    "details": "Scraping completed: 0 new tenders",
-    "timestamp": "2026-02-11T10:23:12.497381",
+    "details": "Scraping completed successfully: Comprehensive scraping complete",
+    "timestamp": "2026-02-12T09:31:29.657703",
     "response_data": null
   },
   {
-    "test": "German Platform Count",
+    "test": "Scraper Execution",
     "success": true,
-    "details": "Uses 15 German platforms (\u226515 required)",
-    "timestamp": "2026-02-11T10:23:12.497404",
-    "response_data": null
-  },
-  {
-    "test": "Country Filter (Germany)",
-    "success": false,
-    "details": "Filter issue: 129 tenders, all_germany=False",
-    "timestamp": "2026-02-11T10:23:12.520358",
-    "response_data": null
-  },
-  {
-    "test": "Platform Source Filter",
-    "success": false,
-    "details": "Filter issue: incorrect platform sources in results",
-    "timestamp": "2026-02-11T10:23:12.553997",
+    "details": "Scraper executed and found 0 new tenders",
+    "timestamp": "2026-02-12T09:31:29.657732",
     "response_data": null
   },
   {
     "test": "Required Fields Verification",
-    "success": false,
-    "details": "Missing fields found: {'country': '100/100'}",
-    "timestamp": "2026-02-11T10:23:12.554151",
+    "success": true,
+    "details": "All required fields present in 50 tested tenders",
+    "timestamp": "2026-02-12T09:31:29.657787",
     "response_data": null
   },
   {
-    "test": "Deduplication Verification",
+    "test": "Country Field Diversity",
     "success": true,
-    "details": "No duplicate titles found in 129 tenders",
-    "timestamp": "2026-02-11T10:23:12.554180",
+    "details": "Found both Germany and Switzerland in country fields: {'Germany', 'Switzerland'}",
+    "timestamp": "2026-02-12T09:31:29.657849",
     "response_data": null
   }
 ]
