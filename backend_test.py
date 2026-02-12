@@ -452,6 +452,10 @@ class GroVELLOWSTestSuite:
         
         end_time = time.time()
         
+        # Generate summary
+        success = self.generate_summary(end_time - start_time)
+        return success
+        
     def generate_summary(self, duration: float):
         """Generate test summary"""
         print("\n" + "=" * 80)
