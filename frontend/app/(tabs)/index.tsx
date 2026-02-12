@@ -375,6 +375,31 @@ export default function TendersScreen() {
 
   return (
     <View style={styles.container}>
+      {/* Header with Title and Country Flags */}
+      <View style={styles.titleHeader}>
+        <Text style={styles.headerTitle}>Tenders</Text>
+        <View style={styles.countryFlagsContainer}>
+          <TouchableOpacity
+            style={[styles.flagButton, selectedCountry === 'All' && styles.flagButtonActive]}
+            onPress={() => handleCountryChange('All')}
+          >
+            <Text style={styles.flagText}>All</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.flagButton, selectedCountry === 'Germany' && styles.flagButtonActive]}
+            onPress={() => handleCountryChange('Germany')}
+          >
+            <Text style={styles.flagEmoji}>🇩🇪</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.flagButton, selectedCountry === 'Switzerland' && styles.flagButtonActive]}
+            onPress={() => handleCountryChange('Switzerland')}
+          >
+            <Text style={styles.flagEmoji}>🇨🇭</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
       {/* Enhanced Header */}
       <View style={styles.header}>
         <View style={styles.searchRow}>
