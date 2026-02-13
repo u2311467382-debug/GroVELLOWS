@@ -99,8 +99,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
+  const updateUser = async (newUser: User | null) => {
+    if (newUser) {
+      await AsyncStorage.setItem('user', JSON.stringify(newUser));
+    } else {
+      await AsyncStorage.removeItem('user');
+    }
+    setUser(newUser);
+  };
+
+  const updateToken = async (newToken: string | null) => {
+    if (newToken) {
+      await AsyncStorage.setItem('token', newToken);
+    } else {
+      await AsyncStorage.removeItem('token');
+    }
+    setToken(newToken);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      token, 
+      login, 
+      register, 
+      logout, 
+      setUser: updateUser, 
+      setToken: updateToken, 
+      loading 
+    }}>
       {children}
     </AuthContext.Provider>
   );
