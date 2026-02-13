@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../utils/colors';
 import { useTranslation } from 'react-i18next';
+import { DocumentTextIcon, NewspaperIcon, BuildingOfficeIcon, StarIcon, UserIcon } from 'react-native-heroicons/outline';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ export default function TabsLayout() {
           title: t('tenders.title'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="document-text" size={20} color={color} />
+            <DocumentTextIcon size={20} color={color} />
           ),
         }}
       />
@@ -43,7 +43,7 @@ export default function TabsLayout() {
         options={{
           title: t('news.title'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="newspaper" size={20} color={color} />
+            <NewspaperIcon size={20} color={color} />
           ),
         }}
       />
@@ -52,7 +52,7 @@ export default function TabsLayout() {
         options={{
           title: t('developerProjects.title'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="business" size={20} color={color} />
+            <BuildingOfficeIcon size={20} color={color} />
           ),
         }}
       />
@@ -61,7 +61,7 @@ export default function TabsLayout() {
         options={{
           title: t('favorites.title'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="star" size={20} color={color} />
+            <StarIcon size={20} color={color} />
           ),
         }}
       />
@@ -70,7 +70,7 @@ export default function TabsLayout() {
         options={{
           title: t('profile.title'),
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={20} color={color} />
+            <UserIcon size={20} color={color} />
           ),
         }}
       />
