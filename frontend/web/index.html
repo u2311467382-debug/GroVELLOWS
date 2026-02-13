@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>GroVELLOWS - German Construction Tenders</title>
+  <meta name="description" content="Track German and Swiss construction tender opportunities">
+  
+  <!-- Ionicons Font - Required for @expo/vector-icons -->
+  <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/ionicons@7.2.2/dist/ionicons/ionicons.esm.js" rel="stylesheet">
+  
+  <!-- Google Fonts for Avenir-like fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Ensure icon fonts are loaded */
+    @font-face {
+      font-family: 'Ionicons';
+      src: url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.woff2') format('woff2'),
+           url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.woff') format('woff'),
+           url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.ttf') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
+    
+    /* Reset and base styles */
+    html, body, #root {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    
+    #root {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Loading indicator */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background-color: #1a2744;
+      color: #a07d50;
+      font-family: 'Nunito Sans', sans-serif;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading">Loading GroVELLOWS...</div>
+  </div>
+</body>
+</html>
