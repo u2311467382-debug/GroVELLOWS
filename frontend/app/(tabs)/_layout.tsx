@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../../utils/colors';
 import { useTranslation } from 'react-i18next';
-import { AppIcon } from '../../components/AppIcon';
 
 export default function TabsLayout() {
   const { t } = useTranslation();
@@ -34,7 +34,7 @@ export default function TabsLayout() {
           title: t('tenders.title'),
           headerShown: false,
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="document-text" size={20} color={color} />
+            <Ionicons name="document-text" size={20} color={color} />
           ),
         }}
       />
@@ -43,7 +43,7 @@ export default function TabsLayout() {
         options={{
           title: t('news.title'),
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="newspaper" size={20} color={color} />
+            <Ionicons name="newspaper" size={20} color={color} />
           ),
         }}
       />
@@ -52,7 +52,7 @@ export default function TabsLayout() {
         options={{
           title: t('developerProjects.title'),
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="business" size={20} color={color} />
+            <Ionicons name="business" size={20} color={color} />
           ),
         }}
       />
@@ -61,7 +61,7 @@ export default function TabsLayout() {
         options={{
           title: t('favorites.title'),
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="star" size={20} color={color} />
+            <Ionicons name="star" size={20} color={color} />
           ),
         }}
       />
@@ -70,7 +70,7 @@ export default function TabsLayout() {
         options={{
           title: t('profile.title'),
           tabBarIcon: ({ color, size }) => (
-            <AppIcon name="person" size={20} color={color} />
+            <Ionicons name="person" size={20} color={color} />
           ),
         }}
       />
