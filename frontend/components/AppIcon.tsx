@@ -5,6 +5,8 @@ import { Ionicons } from '@expo/vector-icons';
 // Icon name to emoji mapping for web fallback
 const iconEmojiMap: { [key: string]: string } = {
   'documents-outline': '📄',
+  'document-text': '📄',
+  'document-text-outline': '📄',
   'mail-outline': '✉️',
   'lock-closed-outline': '🔒',
   'person-outline': '👤',
