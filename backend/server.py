@@ -469,13 +469,89 @@ async def register(user_data: UserRegister):
     
     return Token(access_token=token, token_type="bearer", user=user_response)
 
-@api_router.post("/auth/login", response_model=Token)
-async def login(credentials: UserLogin):
+@api_router.post("/auth/login")
+async def login(credentials: UserLogin, request: Request):
+    """
+    Login with email/password and optional MFA code.
+    If MFA is enabled, requires mfa_code parameter.
+    """
+    client_ip = IPSecurityManager.get_client_ip(request)
+    
+    # Check if IP is blocked
+    if IPSecurityManager.is_ip_blocked(client_ip):
+        log_security_event("login_blocked_ip", {"ip": client_ip, "email": credentials.email})
+        raise HTTPException(
+            status_code=403, 
+            detail="Too many failed attempts. Please try again later."
+        )
+    
+    # Find user
     user = await db.users.find_one({"email": credentials.email})
+    
     if not user or not verify_password(credentials.password, user["password"]):
+        # Record failed attempt
+        should_block = IPSecurityManager.record_failed_login(client_ip, credentials.email)
+        log_security_event("login_failed", {
+            "ip": client_ip, 
+            "email": credentials.email,
+            "blocked": should_block
+        })
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    token = create_access_token({"sub": str(user["_id"])})
+    # Check if MFA is enabled
+    mfa_enabled = user.get("mfa_enabled", False)
+    mfa_secret = user.get("mfa_secret")
+    
+    if mfa_enabled and mfa_secret:
+        # MFA is required
+        if not credentials.mfa_code:
+            # Return special response indicating MFA is needed
+            return {
+                "mfa_required": True,
+                "message": "MFA verification required. Please provide your authenticator code."
+            }
+        
+        # Verify MFA code
+        if not MFAManager.verify_code(mfa_secret, credentials.mfa_code):
+            # Check backup codes
+            backup_codes = user.get("mfa_backup_codes", [])
+            if credentials.mfa_code.upper() in backup_codes:
+                # Valid backup code - remove it
+                backup_codes.remove(credentials.mfa_code.upper())
+                await db.users.update_one(
+                    {"_id": user["_id"]},
+                    {"$set": {"mfa_backup_codes": backup_codes}}
+                )
+                log_security_event("mfa_backup_code_used", {
+                    "user_id": str(user["_id"]),
+                    "remaining_codes": len(backup_codes)
+                })
+            else:
+                log_security_event("mfa_verification_failed", {
+                    "ip": client_ip,
+                    "user_id": str(user["_id"])
+                })
+                raise HTTPException(status_code=401, detail="Invalid MFA code")
+    
+    # Clear failed attempts on successful login
+    IPSecurityManager.clear_failed_attempts(client_ip)
+    
+    # Generate session ID
+    session_id = TokenManager.generate_session_id()
+    
+    # Create token with session info
+    token = create_access_token({
+        "sub": str(user["_id"]),
+        "session_id": session_id,
+        "mfa_verified": mfa_enabled
+    })
+    
+    # Log successful login
+    log_security_event("login_success", {
+        "user_id": str(user["_id"]),
+        "ip": client_ip,
+        "mfa_used": mfa_enabled
+    }, severity="info")
     
     user_response = User(
         id=str(user["_id"]),
@@ -487,7 +563,233 @@ async def login(credentials: UserLogin):
         created_at=user["created_at"]
     )
     
-    return Token(access_token=token, token_type="bearer", user=user_response)
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "user": user_response.dict(),
+        "mfa_enabled": mfa_enabled
+    }
+
+# ============ MFA ENDPOINTS ============
+
+@api_router.post("/auth/mfa/setup")
+async def setup_mfa(
+    setup_request: MFASetupRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Initialize MFA setup - returns QR code for authenticator app.
+    Requires password confirmation.
+    """
+    # Verify password
+    if not verify_password(setup_request.password, current_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Check if MFA is already enabled
+    if current_user.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA is already enabled")
+    
+    # Generate new secret
+    secret = MFAManager.generate_secret()
+    
+    # Generate QR code
+    qr_code = MFAManager.generate_qr_code(secret, current_user["email"])
+    
+    # Store secret temporarily (not yet verified)
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"mfa_secret_pending": secret}}
+    )
+    
+    log_security_event("mfa_setup_initiated", {
+        "user_id": str(current_user["_id"])
+    }, severity="info")
+    
+    return {
+        "qr_code": f"data:image/png;base64,{qr_code}",
+        "secret": secret,  # Also provide secret for manual entry
+        "message": "Scan the QR code with your authenticator app, then verify with a code"
+    }
+
+@api_router.post("/auth/mfa/verify-setup")
+async def verify_mfa_setup(
+    verify_request: MFAVerifyRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Verify MFA setup by confirming a code from the authenticator app.
+    Completes MFA setup and returns backup codes.
+    """
+    pending_secret = current_user.get("mfa_secret_pending")
+    
+    if not pending_secret:
+        raise HTTPException(status_code=400, detail="No MFA setup in progress")
+    
+    # Verify the code
+    if not MFAManager.verify_code(pending_secret, verify_request.code):
+        raise HTTPException(status_code=401, detail="Invalid verification code")
+    
+    # Generate backup codes
+    backup_codes = MFAManager.generate_backup_codes(10)
+    
+    # Enable MFA
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {
+                "mfa_enabled": True,
+                "mfa_secret": pending_secret,
+                "mfa_backup_codes": backup_codes,
+                "mfa_enabled_at": datetime.utcnow()
+            },
+            "$unset": {"mfa_secret_pending": ""}
+        }
+    )
+    
+    log_security_event("mfa_enabled", {
+        "user_id": str(current_user["_id"])
+    }, severity="info")
+    
+    return {
+        "success": True,
+        "backup_codes": backup_codes,
+        "message": "MFA has been enabled. Please save these backup codes securely - they cannot be shown again!"
+    }
+
+@api_router.post("/auth/mfa/disable")
+async def disable_mfa(
+    password: str = Body(..., embed=True),
+    mfa_code: str = Body(..., embed=True),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Disable MFA - requires both password and current MFA code.
+    """
+    # Verify password
+    if not verify_password(password, current_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Verify MFA code
+    mfa_secret = current_user.get("mfa_secret")
+    if not mfa_secret or not MFAManager.verify_code(mfa_secret, mfa_code):
+        raise HTTPException(status_code=401, detail="Invalid MFA code")
+    
+    # Disable MFA
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {
+            "$set": {"mfa_enabled": False},
+            "$unset": {
+                "mfa_secret": "",
+                "mfa_backup_codes": "",
+                "mfa_secret_pending": ""
+            }
+        }
+    )
+    
+    log_security_event("mfa_disabled", {
+        "user_id": str(current_user["_id"])
+    }, severity="warning")
+    
+    return {"success": True, "message": "MFA has been disabled"}
+
+@api_router.get("/auth/mfa/status")
+async def get_mfa_status(current_user: dict = Depends(get_current_user)):
+    """Get current MFA status for the user"""
+    return {
+        "mfa_enabled": current_user.get("mfa_enabled", False),
+        "mfa_enabled_at": current_user.get("mfa_enabled_at"),
+        "backup_codes_remaining": len(current_user.get("mfa_backup_codes", []))
+    }
+
+@api_router.post("/auth/mfa/regenerate-backup-codes")
+async def regenerate_backup_codes(
+    password: str = Body(..., embed=True),
+    mfa_code: str = Body(..., embed=True),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Regenerate backup codes - invalidates all previous backup codes.
+    Requires both password and MFA code.
+    """
+    if not current_user.get("mfa_enabled"):
+        raise HTTPException(status_code=400, detail="MFA is not enabled")
+    
+    # Verify password
+    if not verify_password(password, current_user["password"]):
+        raise HTTPException(status_code=401, detail="Invalid password")
+    
+    # Verify MFA code
+    mfa_secret = current_user.get("mfa_secret")
+    if not MFAManager.verify_code(mfa_secret, mfa_code):
+        raise HTTPException(status_code=401, detail="Invalid MFA code")
+    
+    # Generate new backup codes
+    backup_codes = MFAManager.generate_backup_codes(10)
+    
+    await db.users.update_one(
+        {"_id": current_user["_id"]},
+        {"$set": {"mfa_backup_codes": backup_codes}}
+    )
+    
+    log_security_event("mfa_backup_codes_regenerated", {
+        "user_id": str(current_user["_id"])
+    }, severity="info")
+    
+    return {
+        "success": True,
+        "backup_codes": backup_codes,
+        "message": "New backup codes generated. Previous codes are now invalid."
+    }
+
+@api_router.post("/auth/logout")
+async def logout(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    """
+    Logout and invalidate the current token.
+    """
+    try:
+        token = credentials.credentials
+        token_hash = TokenManager.hash_token(token)
+        TokenManager.blacklist_token(token_hash)
+        
+        # Decode token to get user info for logging
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        
+        log_security_event("logout", {
+            "user_id": user_id,
+            "ip": IPSecurityManager.get_client_ip(request)
+        }, severity="info")
+        
+        return {"success": True, "message": "Logged out successfully"}
+    except Exception as e:
+        logger.error(f"Logout error: {e}")
+        return {"success": True, "message": "Logged out"}
+
+# ============ SECURITY ADMIN ENDPOINTS ============
+
+@api_router.get("/admin/security/status")
+async def get_security_status_endpoint(current_user: dict = Depends(get_current_user)):
+    """Get current security system status (Admin only)"""
+    if not check_permission(current_user, "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return get_security_status()
+
+@api_router.get("/admin/security/audit-log")
+async def get_audit_log_endpoint(
+    limit: int = Query(100, le=1000),
+    event_type: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get security audit log (Admin only)"""
+    if not check_permission(current_user, "admin"):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return get_audit_log(limit, event_type)
 
 @api_router.get("/auth/me", response_model=User)
 async def get_me(current_user: dict = Depends(get_current_user)):
