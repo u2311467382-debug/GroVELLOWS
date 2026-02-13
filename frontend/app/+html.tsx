@@ -11,25 +11,27 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         
-        {/* Ionicons font for @expo/vector-icons */}
-        <link 
-          href="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js" 
-          rel="modulepreload" 
-        />
-        <link 
-          href="https://cdn.jsdelivr.net/npm/ionicons@7.1.0/dist/css/ionicons.min.css" 
-          rel="stylesheet" 
-        />
-        
-        {/* Icon font face definition */}
+        {/* Icon font face definition - load from CDN for reliability */}
         <style dangerouslySetInnerHTML={{ __html: `
           @font-face {
             font-family: 'Ionicons';
-            src: url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.woff2') format('woff2'),
-                 url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.woff') format('woff'),
-                 url('https://unpkg.com/ionicons@4.5.10-0/dist/fonts/ionicons.ttf') format('truetype');
+            src: url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff2') format('woff2'),
+                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff') format('woff'),
+                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
+            font-display: block;
+          }
+          
+          /* Fallback for vector icons */
+          @font-face {
+            font-family: 'ionicons';
+            src: url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff2') format('woff2'),
+                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff') format('woff'),
+                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: block;
           }
           
           /* Ensure proper rendering */
