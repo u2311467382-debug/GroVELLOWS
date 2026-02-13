@@ -49,14 +49,14 @@ export default function Login() {
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <AppIcon name="documents-outline" size={80} color={colors.secondary} />
+          <Ionicons name="documents-outline" size={80} color={colors.secondary} />
           <Text style={styles.title}>{t('app.name')}</Text>
           <Text style={styles.subtitle}>{t('app.subtitle')}</Text>
         </View>
 
         <View style={styles.form}>
           <View style={styles.inputContainer}>
-            <AppIcon name="mail-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+            <Ionicons name="mail-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder={t('auth.email')}
@@ -69,7 +69,7 @@ export default function Login() {
           </View>
 
           <View style={styles.inputContainer}>
-            <AppIcon name="lock-closed-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
+            <Ionicons name="lock-closed-outline" size={20} color={colors.textLight} style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder={t('auth.password')}
