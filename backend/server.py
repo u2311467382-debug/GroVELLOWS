@@ -397,6 +397,12 @@ def create_access_token(data: dict) -> str:
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> dict:
     try:
         token = credentials.credentials
+        
+        # Check if token is blacklisted
+        token_hash = TokenManager.hash_token(token)
+        if TokenManager.is_token_blacklisted(token_hash):
+            raise HTTPException(status_code=401, detail="Token has been invalidated")
+        
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
         if user_id is None:
@@ -405,6 +411,10 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         user = await db.users.find_one({"_id": ObjectId(user_id)})
         if user is None:
             raise HTTPException(status_code=401, detail="User not found")
+        
+        # Check if user is active
+        if not user.get("is_active", True):
+            raise HTTPException(status_code=401, detail="User account is disabled")
         
         return user
     except jwt.ExpiredSignatureError:
