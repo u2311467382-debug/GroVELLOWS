@@ -16,6 +16,7 @@ import bcrypt
 import re
 import hashlib
 import asyncio
+import secrets
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -27,8 +28,21 @@ from bson import json_util
 from fastapi.responses import JSONResponse
 from fastapi.encoders import ENCODERS_BY_TYPE
 
-# Import security middleware
-from security import SecurityMiddleware, sanitize_input, sanitize_dict, get_data_breach_risks
+# Import enhanced security module
+from security import (
+    SecurityMiddleware, 
+    sanitize_input, 
+    sanitize_dict, 
+    get_data_breach_risks,
+    MFAManager,
+    TokenManager,
+    IPSecurityManager,
+    log_security_event,
+    get_audit_log,
+    validate_password_strength,
+    get_security_status,
+    validate_email
+)
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
