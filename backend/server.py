@@ -2845,11 +2845,14 @@ async def startup_event():
         replace_existing=True
     )
     
+    # Schedule cleanup at 7pm German time (19:00 CET/CEST)
+    # CET is UTC+1, CEST (summer) is UTC+2
+    # Using 17:00 UTC which is 19:00 CET (winter) or 18:00 UTC for 19:00 CEST (summer)
     scheduler.add_job(
         cleanup_awarded_tenders,
-        IntervalTrigger(minutes=5),
+        CronTrigger(hour=17, minute=0, timezone='UTC'),  # 19:00 CET (winter) / 18:00 CEST (summer) - approximate
         id="cleanup_tenders",
-        name="Cleanup awarded tenders every 5 minutes",
+        name="Cleanup awarded tenders daily at 7pm German time",
         replace_existing=True
     )
     
@@ -2857,7 +2860,7 @@ async def startup_event():
     logger.info("✅ Background scheduler started:")
     logger.info("   - Tenders scraping: every 1 minute")
     logger.info("   - News scraping: every 5 minutes")
-    logger.info("   - Cleanup: every 5 minutes")
+    logger.info("   - Cleanup: daily at 7pm German time (19:00 CET)")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
