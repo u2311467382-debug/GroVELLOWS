@@ -1,40 +1,56 @@
 import { Stack } from 'expo-router';
 import { AuthProvider } from '../contexts/AuthContext';
 import { StatusBar } from 'expo-status-bar';
-import { useFonts } from 'expo-font';
-import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useEffect, useState } from 'react';
+import { View } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
+import * as Font from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
 import '../utils/i18n'; // Initialize i18n
 
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  // Load icon fonts
-  const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
-  });
+  const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {
-    if (fontsLoaded) {
-      SplashScreen.hideAsync();
+    async function prepare() {
+      try {
+        // Pre-load fonts
+        await Font.loadAsync({
+          ...Ionicons.font,
+        });
+      } catch (e) {
+        console.warn('Font loading error:', e);
+      } finally {
+        setAppIsReady(true);
+      }
     }
-  }, [fontsLoaded]);
 
-  // Don't render until fonts are loaded
-  if (!fontsLoaded) {
+    prepare();
+  }, []);
+
+  const onLayoutRootView = useCallback(async () => {
+    if (appIsReady) {
+      await SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
+
+  if (!appIsReady) {
     return null;
   }
 
   return (
-    <AuthProvider>
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-    </AuthProvider>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <AuthProvider>
+        <StatusBar style="light" />
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="(auth)" />
+          <Stack.Screen name="(tabs)" />
+        </Stack>
+      </AuthProvider>
+    </View>
   );
 }
