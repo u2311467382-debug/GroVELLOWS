@@ -9,14 +9,45 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app does not require camera access",
+        "NSPhotoLibraryUsageDescription": "This app does not require photo library access",
+        "NSContactsUsageDescription": "This app does not require contacts access",
+        "NSLocationWhenInUseUsageDescription": "This app does not require location access",
+        "NSMicrophoneUsageDescription": "This app does not require microphone access",
+        "NSCalendarsUsageDescription": "This app does not require calendar access"
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "INTERNET"
+      ],
+      "blockedPermissions": [
+        "READ_CONTACTS",
+        "WRITE_CONTACTS",
+        "READ_CALENDAR",
+        "WRITE_CALENDAR",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_PHONE_STATE",
+        "READ_CALL_LOG",
+        "READ_SMS",
+        "RECEIVE_SMS",
+        "SEND_SMS"
+      ]
     },
     "web": {
       "bundler": "metro",
