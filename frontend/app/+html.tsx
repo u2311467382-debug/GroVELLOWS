@@ -11,24 +11,11 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
         
-        {/* Icon font face definition - load from CDN for reliability */}
+        {/* Icon font face definition - @expo/vector-icons uses 'ionicons' (lowercase) as font family */}
         <style dangerouslySetInnerHTML={{ __html: `
           @font-face {
-            font-family: 'Ionicons';
-            src: url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff2') format('woff2'),
-                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff') format('woff'),
-                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.ttf') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-            font-display: block;
-          }
-          
-          /* Fallback for vector icons */
-          @font-face {
             font-family: 'ionicons';
-            src: url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff2') format('woff2'),
-                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.woff') format('woff'),
-                 url('https://cdn.jsdelivr.net/npm/ionicons@4.6.3/dist/fonts/ionicons.ttf') format('truetype');
+            src: url('https://cdn.jsdelivr.net/npm/@nickvdyck/react-native-vector-icons-web@4.0.0/fonts/Ionicons.ttf') format('truetype');
             font-weight: normal;
             font-style: normal;
             font-display: block;
