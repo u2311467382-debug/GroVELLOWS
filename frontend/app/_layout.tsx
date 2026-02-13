@@ -17,10 +17,8 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Pre-load fonts
-        await Font.loadAsync({
-          ...Ionicons.font,
-        });
+        // Pre-load Ionicons font - this is critical for web
+        await Font.loadAsync(Ionicons.font);
       } catch (e) {
         console.warn('Font loading error:', e);
       } finally {
