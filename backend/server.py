@@ -2762,52 +2762,68 @@ async def auto_scrape_news():
 
 async def cleanup_awarded_tenders():
     """
-    Background task that runs every 5 minutes to clean up awarded/closed tenders.
-    Only removes tenders that are NOT in any user's favorites.
-    Keeps tenders for 3 months (90 days) maximum.
+    Background task that runs daily at 7pm German time to clean up tenders.
+    
+    Retention rules:
+    1. Keep tenders until their application deadline passes
+    2. If applied, keep tenders until awarding is done (status becomes Won/Lost/Closed)
+    3. Never delete tenders in user's favorites
+    4. Never delete tenders with active applications
     """
     try:
-        logger.info("🧹 Cleanup task started...")
+        logger.info("🧹 Cleanup task started (7pm German time)...")
         
         # Get all favorite tender IDs
         favorite_tender_ids = set()
         async for fav in db.favorites.find({}, {"tender_id": 1}):
             favorite_tender_ids.add(fav.get("tender_id"))
         
-        # Find tenders to cleanup:
-        # 1. Status: Closed OR application_status: Won/Lost
-        # 2. OR older than 3 months (90 days) based on created_at or scraped_at
-        # Keep tenders for 3 months (90 days) before cleanup
-        three_months_ago = datetime.utcnow() - timedelta(days=90)
-        
-        query = {
-            "$or": [
-                {"status": "Closed"},
-                {"application_status": {"$in": ["Won", "Lost"]}},
-                {"deadline": {"$lt": datetime.utcnow() - timedelta(days=90)}},  # Expired > 3 months
-                {"created_at": {"$lt": three_months_ago}},  # Created > 3 months ago
-                {"scraped_at": {"$lt": three_months_ago}}   # Scraped > 3 months ago
-            ]
-        }
+        # Current time for deadline comparison
+        now = datetime.utcnow()
         
         deleted_count = 0
-        async for tender in db.tenders.find(query):
+        async for tender in db.tenders.find():
             tender_id = str(tender["_id"])
             
-            # Skip if in anyone's favorites
+            # Rule 1: Never delete favorites
             if tender_id in favorite_tender_ids:
                 continue
             
-            # Skip if user has applied to it
-            if tender.get("applied_by") and len(tender.get("applied_by", [])) > 0:
-                continue
+            # Rule 2: Check if tender has been applied to
+            is_applied = tender.get("is_applied", False) or tender.get("application_status") not in [None, "Not Applied"]
+            applied_by = tender.get("applied_by", [])
+            has_active_application = is_applied or len(applied_by) > 0
             
-            # Delete the tender
+            if has_active_application:
+                # Rule 3: If applied, only delete if awarding is complete (Won/Lost/Closed)
+                status = tender.get("status", "")
+                app_status = tender.get("application_status", "")
+                
+                awarding_complete = status == "Closed" or app_status in ["Won", "Lost"]
+                
+                if not awarding_complete:
+                    # Keep tracking - awarding not done yet
+                    continue
+            else:
+                # Rule 4: If NOT applied, only delete if deadline has passed
+                deadline = tender.get("deadline")
+                if deadline:
+                    if isinstance(deadline, str):
+                        try:
+                            deadline = datetime.fromisoformat(deadline.replace('Z', '+00:00'))
+                        except:
+                            deadline = None
+                    
+                    if deadline and deadline > now:
+                        # Deadline not passed yet - keep tender
+                        continue
+            
+            # Safe to delete
             await db.tenders.delete_one({"_id": tender["_id"]})
             deleted_count += 1
         
         if deleted_count > 0:
-            logger.info(f"🧹 Cleanup complete: {deleted_count} awarded/expired tenders removed (3-month retention)")
+            logger.info(f"🧹 Cleanup complete: {deleted_count} expired tenders removed")
         else:
             logger.info("🧹 Cleanup complete: No tenders to remove")
             
