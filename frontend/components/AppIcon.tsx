@@ -91,6 +91,8 @@ const iconEmojiMap: { [key: string]: string } = {
   'globe-outline': '🌐',
   'people': '👥',
   'people-outline': '👥',
+  'person': '👤',
+  'person-outline': '👤',
   'menu': '☰',
   'menu-outline': '☰',
 };
