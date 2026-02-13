@@ -167,6 +167,26 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+    mfa_code: Optional[str] = None  # TOTP code for MFA verification
+
+class MFASetupRequest(BaseModel):
+    """Request to setup MFA for user"""
+    password: str  # Require password confirmation to setup MFA
+
+class MFAVerifyRequest(BaseModel):
+    """Verify MFA code during setup or login"""
+    code: str
+    
+    @validator('code')
+    def validate_code(cls, v):
+        if not v or len(v) != 6 or not v.isdigit():
+            raise ValueError('MFA code must be 6 digits')
+        return v
+
+class MFABackupCodesResponse(BaseModel):
+    """Response with backup codes after MFA setup"""
+    backup_codes: List[str]
+    message: str
 
 class User(BaseModel):
     id: str
