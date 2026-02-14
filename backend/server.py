@@ -333,20 +333,23 @@ class NewsArticle(BaseModel):
 class DeveloperProject(BaseModel):
     id: Optional[str] = None
     developer_name: str
-    developer_url: str
+    developer_url: Optional[str] = None
     project_name: str
     description: str
     location: str
+    region: Optional[str] = None
     budget: Optional[str] = None
     project_type: str
     status: str  # "planning", "ongoing", "delayed", "completed"
-    start_date: datetime
-    expected_completion: datetime
-    actual_completion: Optional[datetime] = None
-    timeline_phases: List[dict] = []  # [{"phase": "Foundation", "status": "completed", "date": "..."}]
+    start_date: Optional[str] = None
+    expected_completion: Optional[str] = None
+    actual_completion: Optional[str] = None
+    timeline_phases: List[dict] = []  # [{"phase": "Foundation", "status": "completed", "progress": 50}]
     contacts: dict = {}
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    source_url: Optional[str] = None
+    scraped_at: Optional[datetime] = None
+    created_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updated_at: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
 class TenderPortal(BaseModel):
     id: Optional[str] = None
