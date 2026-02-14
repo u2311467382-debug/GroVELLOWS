@@ -437,8 +437,12 @@ export default function TenderDetailScreen() {
               <Ionicons name="globe-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.linkContent}>
-              <Text style={styles.linkLabel}>View on Portal</Text>
-              <Text style={styles.linkSource} numberOfLines={1}>{tender.platform_source}</Text>
+              <Text style={styles.linkLabel}>
+                {tender.direct_link ? 'View Tender Details' : 'View on Portal'}
+              </Text>
+              <Text style={styles.linkSource} numberOfLines={1}>
+                {tender.direct_link ? `Direct link on ${tender.platform_source}` : tender.platform_source}
+              </Text>
             </View>
             <Ionicons name="open-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
