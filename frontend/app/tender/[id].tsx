@@ -251,8 +251,10 @@ export default function TenderDetailScreen() {
   };
 
   const openPlatformUrl = () => {
-    if (tender?.platform_url) {
-      Linking.openURL(tender.platform_url);
+    // Prioritize direct_link (specific tender page), fallback to platform_url
+    const url = tender?.direct_link || tender?.platform_url;
+    if (url) {
+      Linking.openURL(url);
     }
   };
 
