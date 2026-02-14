@@ -1491,6 +1491,7 @@ async def get_news_article(
 async def get_developer_projects(
     status: Optional[str] = None,
     developer: Optional[str] = None,
+    region: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
     query = {}
@@ -1499,6 +1500,18 @@ async def get_developer_projects(
         query["status"] = status
     if developer:
         query["developer_name"] = {"$regex": developer, "$options": "i"}
+    if region:
+        # Map region filter to actual region values
+        region_map = {
+            "NRW": "NRW",
+            "Nordrhein-Westfalen": "NRW",
+            "Brandenburg": "Brandenburg",
+            "Berlin": "Berlin",
+            "All": None
+        }
+        mapped_region = region_map.get(region, region)
+        if mapped_region:
+            query["region"] = mapped_region
     
     projects = await db.developer_projects.find(query).sort("updated_at", -1).to_list(1000)
     
