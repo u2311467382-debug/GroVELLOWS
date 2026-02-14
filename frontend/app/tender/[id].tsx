@@ -447,30 +447,8 @@ export default function TenderDetailScreen() {
             <Ionicons name="open-outline" size={18} color={colors.primary} />
           </TouchableOpacity>
 
-          {/* Direct Application Link */}
-          <TouchableOpacity
-            style={[styles.linkButton, styles.applicationLinkButton]}
-            onPress={() => {
-              // Priority: application_url > direct_link > platform_url
-              const appUrl = tender.application_url || tender.direct_link || tender.platform_url;
-              if (appUrl) Linking.openURL(appUrl);
-            }}
-          >
-            <View style={[styles.linkIconContainer, styles.applicationIconContainer]}>
-              <Ionicons name="document-text-outline" size={20} color={colors.textWhite} />
-            </View>
-            <View style={styles.linkContent}>
-              <Text style={[styles.linkLabel, styles.applicationLabel]}>Apply for Tender</Text>
-              <Text style={styles.linkSubtext}>
-                {tender.application_url ? 'Direct application link' : 
-                 tender.direct_link ? 'Opens tender page directly' : 'Opens platform page'}
-              </Text>
-            </View>
-            <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
-          </TouchableOpacity>
-
           {/* Info banner about direct link */}
-          {tender.direct_link && !tender.application_url && (
+          {tender.direct_link && (
             <View style={styles.infoBanner}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               <Text style={styles.infoText}>
@@ -480,11 +458,11 @@ export default function TenderDetailScreen() {
           )}
 
           {/* Warning if no direct link */}
-          {!tender.direct_link && !tender.application_url && (
+          {!tender.direct_link && (
             <View style={styles.warningBanner}>
               <Ionicons name="information-circle" size={18} color="#F57C00" />
               <Text style={styles.warningText}>
-                No direct application link available. You may need to search for this tender on the portal.
+                No direct link available. You may need to search for this tender on the portal.
               </Text>
             </View>
           )}
