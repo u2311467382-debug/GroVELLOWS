@@ -821,6 +821,23 @@ const styles = StyleSheet.create({
     color: '#E65100',
     lineHeight: 18,
   },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#E8F5E9',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.success,
+    gap: 8,
+    marginBottom: 12,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#2E7D32',
+    lineHeight: 18,
+  },
   statusButtons: {
     flexDirection: 'row',
     gap: 8,
