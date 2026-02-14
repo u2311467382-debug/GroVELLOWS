@@ -447,7 +447,8 @@ export default function TenderDetailScreen() {
           <TouchableOpacity
             style={[styles.linkButton, styles.applicationLinkButton]}
             onPress={() => {
-              const appUrl = tender.application_url || tender.platform_url;
+              // Priority: application_url > direct_link > platform_url
+              const appUrl = tender.application_url || tender.direct_link || tender.platform_url;
               if (appUrl) Linking.openURL(appUrl);
             }}
           >
@@ -457,14 +458,25 @@ export default function TenderDetailScreen() {
             <View style={styles.linkContent}>
               <Text style={[styles.linkLabel, styles.applicationLabel]}>Apply for Tender</Text>
               <Text style={styles.linkSubtext}>
-                {tender.application_url ? 'Direct application link' : 'Opens platform page'}
+                {tender.application_url ? 'Direct application link' : 
+                 tender.direct_link ? 'Opens tender page directly' : 'Opens platform page'}
               </Text>
             </View>
             <Ionicons name="arrow-forward-circle" size={22} color={colors.secondary} />
           </TouchableOpacity>
 
-          {/* Warning if no dedicated application URL */}
-          {!tender.application_url && (
+          {/* Info banner about direct link */}
+          {tender.direct_link && !tender.application_url && (
+            <View style={styles.infoBanner}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={styles.infoText}>
+                Direct link available - opens the specific tender page on {tender.platform_source}
+              </Text>
+            </View>
+          )}
+
+          {/* Warning if no direct link */}
+          {!tender.direct_link && !tender.application_url && (
             <View style={styles.warningBanner}>
               <Ionicons name="information-circle" size={18} color="#F57C00" />
               <Text style={styles.warningText}>
