@@ -36,12 +36,14 @@ interface Tender {
   building_typology?: string;
   platform_source: string;
   platform_url: string;
+  direct_link?: string;  // Direct link to the specific tender page
   application_url?: string;
   status: string;
   is_applied?: boolean;
   application_status?: string;
   claimed_by?: string;
   claimed_by_name?: string;
+  tender_id?: string;  // Ausschreibungs-ID / Meldungsnummer
 }
 
 interface Employee {
