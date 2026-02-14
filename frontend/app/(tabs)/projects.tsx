@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  SafeAreaView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import { BuildingOfficeIcon, MapPinIcon, CurrencyEuroIcon, CalendarIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
 import { colors } from '../../utils/colors';
 import api from '../../utils/api';
 import { format } from 'date-fns';
@@ -21,11 +22,13 @@ interface DeveloperProject {
   project_name: string;
   description: string;
   location: string;
+  region?: string;
   budget?: string;
   project_type: string;
   status: string;
   start_date: string;
   expected_completion: string;
+  source_url?: string;
   timeline_phases: Array<{
     phase: string;
     status: string;
@@ -47,20 +50,29 @@ const PHASE_STATUS_COLORS = {
   pending: colors.textLight,
 };
 
+// Region filters
+const REGIONS = [
+  { id: 'All', label: 'All', flag: '🇩🇪' },
+  { id: 'NRW', label: 'NRW', flag: '🏭' },
+  { id: 'Brandenburg', label: 'Brandenburg', flag: '🌲' },
+];
+
 export default function ProjectsScreen() {
   const [projects, setProjects] = useState<DeveloperProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('All');
   const router = useRouter();
   const { t } = useTranslation();
 
   useEffect(() => {
     fetchProjects();
-  }, []);
+  }, [selectedRegion]);
 
   const fetchProjects = async () => {
     try {
-      const response = await api.get('/developer-projects');
+      const params = selectedRegion !== 'All' ? { region: selectedRegion } : {};
+      const response = await api.get('/developer-projects', { params });
       setProjects(response.data);
     } catch (error) {
       console.error('Failed to fetch projects:', error);
@@ -73,7 +85,12 @@ export default function ProjectsScreen() {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchProjects();
-  }, []);
+  }, [selectedRegion]);
+
+  const handleRegionChange = (regionId: string) => {
+    setSelectedRegion(regionId);
+    setLoading(true);
+  };
 
   const renderProjectCard = ({ item }: { item: DeveloperProject }) => (
     <View style={styles.card}>
@@ -81,15 +98,15 @@ export default function ProjectsScreen() {
         <View
           style={[
             styles.statusBadge,
-            { backgroundColor: STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] },
+            { backgroundColor: STATUS_COLORS[item.status as keyof typeof STATUS_COLORS] || colors.info },
           ]}
         >
           <Text style={styles.statusText}>
-            {t(`developerProjects.statuses.${item.status}`)}
+            {t(`developerProjects.statuses.${item.status}`) || item.status}
           </Text>
         </View>
         <View style={styles.developerBadge}>
-          <Ionicons name="business" size={14} color={colors.primary} />
+          <BuildingOfficeIcon size={14} color={colors.primary} />
           <Text style={styles.developerText} numberOfLines={1}>
             {item.developer_name.split(' ')[0]}
           </Text>
@@ -101,13 +118,18 @@ export default function ProjectsScreen() {
       </Text>
 
       <View style={styles.infoRow}>
-        <Ionicons name="location" size={16} color={colors.textLight} />
+        <MapPinIcon size={16} color={colors.textLight} />
         <Text style={styles.infoText}>{item.location}</Text>
+        {item.region && (
+          <View style={styles.regionTag}>
+            <Text style={styles.regionTagText}>{item.region}</Text>
+          </View>
+        )}
       </View>
 
       {item.budget && (
         <View style={styles.infoRow}>
-          <Ionicons name="cash" size={16} color={colors.textLight} />
+          <CurrencyEuroIcon size={16} color={colors.textLight} />
           <Text style={styles.infoText}>{item.budget}</Text>
         </View>
       )}
@@ -118,12 +140,12 @@ export default function ProjectsScreen() {
 
       <View style={styles.timelineSection}>
         <Text style={styles.timelineTitle}>{t('developerProjects.timeline')}</Text>
-        {item.timeline_phases && item.timeline_phases.slice(0, 3).map((phase, index) => (
+        {item.timeline_phases && item.timeline_phases.slice(0, 4).map((phase, index) => (
           <View key={index} style={styles.phaseRow}>
             <View
               style={[
                 styles.phaseDot,
-                { backgroundColor: PHASE_STATUS_COLORS[phase.status as keyof typeof PHASE_STATUS_COLORS] },
+                { backgroundColor: PHASE_STATUS_COLORS[phase.status as keyof typeof PHASE_STATUS_COLORS] || colors.textLight },
               ]}
             />
             <View style={styles.phaseContent}>
@@ -134,7 +156,7 @@ export default function ProjectsScreen() {
                     styles.progressFill,
                     {
                       width: `${phase.progress}%`,
-                      backgroundColor: PHASE_STATUS_COLORS[phase.status as keyof typeof PHASE_STATUS_COLORS],
+                      backgroundColor: PHASE_STATUS_COLORS[phase.status as keyof typeof PHASE_STATUS_COLORS] || colors.textLight,
                     },
                   ]}
                 />
@@ -147,46 +169,83 @@ export default function ProjectsScreen() {
 
       <View style={styles.cardFooter}>
         <View style={styles.dateInfo}>
+          <CalendarIcon size={14} color={colors.textLight} />
           <Text style={styles.dateLabel}>{t('developerProjects.expectedCompletion')}:</Text>
           <Text style={styles.dateValue}>
-            {format(new Date(item.expected_completion), 'MMM yyyy')}
+            {item.expected_completion ? format(new Date(item.expected_completion), 'MMM yyyy') : 'TBD'}
           </Text>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+        <ChevronRightIcon size={20} color={colors.primary} />
       </View>
     </View>
   );
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={projects}
-        renderItem={renderProjectCard}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={colors.primary}
-          />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <Ionicons name="business-outline" size={64} color={colors.textLight} />
-            <Text style={styles.emptyText}>{t('developerProjects.noProjects')}</Text>
-          </View>
-        }
-      />
-    </View>
+    <SafeAreaView style={styles.container}>
+      {/* Header with Region Filters */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Developer Projects</Text>
+        <Text style={styles.headerSubtitle}>Track construction projects from German developers</Text>
+        
+        {/* Region Filter Buttons */}
+        <View style={styles.filterContainer}>
+          {REGIONS.map((region) => (
+            <TouchableOpacity
+              key={region.id}
+              style={[
+                styles.filterButton,
+                selectedRegion === region.id && styles.filterButtonActive,
+              ]}
+              onPress={() => handleRegionChange(region.id)}
+            >
+              <Text style={styles.filterFlag}>{region.flag}</Text>
+              <Text
+                style={[
+                  styles.filterText,
+                  selectedRegion === region.id && styles.filterTextActive,
+                ]}
+              >
+                {region.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+        
+        {/* Results count */}
+        <Text style={styles.resultsCount}>
+          {projects.length} {projects.length === 1 ? 'project' : 'projects'} found
+        </Text>
+      </View>
+
+      {loading ? (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={projects}
+          renderItem={renderProjectCard}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <BuildingOfficeIcon size={64} color={colors.textLight} />
+              <Text style={styles.emptyText}>{t('developerProjects.noProjects')}</Text>
+              <Text style={styles.emptySubtext}>
+                No projects found for {selectedRegion === 'All' ? 'any region' : selectedRegion}
+              </Text>
+            </View>
+          }
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
@@ -194,6 +253,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  header: {
+    backgroundColor: colors.primary,
+    padding: 16,
+    paddingTop: 8,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: colors.accent,
+    marginBottom: 4,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginBottom: 12,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 8,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.secondary,
+  },
+  filterFlag: {
+    fontSize: 16,
+  },
+  filterText: {
+    fontSize: 13,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  filterTextActive: {
+    color: colors.textWhite,
+  },
+  resultsCount: {
+    fontSize: 12,
+    color: colors.textLight,
   },
   centered: {
     flex: 1,
@@ -229,6 +336,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textWhite,
     fontWeight: '600',
+    textTransform: 'capitalize',
   },
   developerBadge: {
     flexDirection: 'row',
@@ -260,6 +368,18 @@ const styles = StyleSheet.create({
   infoText: {
     fontSize: 13,
     color: colors.textLight,
+    flex: 1,
+  },
+  regionTag: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  regionTagText: {
+    fontSize: 10,
+    color: colors.textWhite,
+    fontWeight: '600',
   },
   cardDescription: {
     fontSize: 14,
@@ -345,5 +465,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.textLight,
     marginTop: 16,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginTop: 8,
   },
 });
