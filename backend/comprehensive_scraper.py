@@ -2238,7 +2238,13 @@ class ComprehensiveScraper:
             
             ted_tenders = await self.scrape_ted_europa()
             all_tenders.extend(ted_tenders)
-            logger.info(f"TED Europa: {len(ted_tenders)} tenders")
+            logger.info(f"TED Europa (Germany): {len(ted_tenders)} tenders")
+            
+            # ========== INTERNATIONAL/EUROPEAN TENDERS ==========
+            logger.info("\n=== International CPV Code Tenders ===")
+            ted_intl_tenders = await self.scrape_ted_international()
+            all_tenders.extend(ted_intl_tenders)
+            logger.info(f"TED Europa (International): {len(ted_intl_tenders)} tenders")
             
             ibau_tenders = await self.scrape_ibau()
             all_tenders.extend(ibau_tenders)
