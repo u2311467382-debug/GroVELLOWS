@@ -352,48 +352,47 @@ class ComprehensiveScraper:
     # ==================== GERMAN FEDERAL PLATFORMS ====================
     
     async def scrape_bund_de(self) -> list:
-        """Scrape SERVICE.BUND.DE - Federal tenders with pagination and CPV code support"""
+        """Scrape SERVICE.BUND.DE - Federal tenders 
+        Note: Bund.de uses a form-based search. We'll scrape the main listing and search by keywords.
+        CPV code filtering is done via the TED Europa which indexes German federal tenders with CPV codes.
+        """
         tenders = []
         seen_tender_ids = set()
         
-        # Base URL search (existing functionality)
-        base_urls_pages = []
-        for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
-            base_urls_pages.append(
-                f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?nn=4641514&cl2Categories_Typ=vergabe&pageNo={page_num}"
-            )
+        # Main tender listing URLs with different search terms
+        search_terms = [
+            "projektsteuerung",
+            "projektmanagement",
+            "baumanagement",
+            "bauleitung",
+            "bauüberwachung",
+        ]
         
-        # CPV code search URLs (only base codes without suffixes for efficiency)
-        cpv_urls = []
-        for base_code in CPV_CODES_BASE.keys():
-            cpv_urls.append(
-                f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?nn=4641514&cl2Categories_Typ=vergabe&searchText={base_code}"
-            )
+        # Add CPV code base numbers as search terms
+        for cpv_code in CPV_CODES_BASE.keys():
+            search_terms.append(cpv_code)
         
-        all_urls = base_urls_pages + cpv_urls
-        logger.info(f"Bund.de: Searching {len(base_urls_pages)} paginated pages + {len(cpv_urls)} CPV code searches")
+        logger.info(f"Bund.de: Searching with {len(search_terms)} search terms (keywords + CPV codes)")
         
-        for url in all_urls:
+        for search_term in search_terms:
+            # Bund.de search result URL format
+            url = f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Formular.html?nn=4641514&searchText={quote_plus(search_term)}&cl2Categories_Typ=vergabe"
+            
             html = await self.fetch_page(url)
             if not html:
                 continue
                 
             soup = BeautifulSoup(html, 'lxml')
-            items = soup.select('.searchResult, .result-item, article, .c-teaser')
+            items = soup.select('.searchResult, .result-item, article, .c-teaser, .teaser')
             
             if len(items) == 0:
-                continue
+                # Try alternative selectors
+                items = soup.select('a[href*="/Ausschreibungen/"]')
             
-            # Determine if this is a CPV code search
-            cpv_match = re.search(r'searchText=([0-9]+)', url)
-            cpv_info = f" (CPV: {cpv_match.group(1)})" if cpv_match else ""
-            page_match = re.search(r'pageNo=(\d+)', url)
-            page_info = f" (page {page_match.group(1)})" if page_match else ""
-            
-            logger.info(f"Bund.de{page_info}{cpv_info}: Found {len(items)} items")
+            logger.info(f"Bund.de ('{search_term}'): Found {len(items)} items")
             
             for item in items:
-                title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline')
+                title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline, a')
                 if title_elem:
                     title = title_elem.get_text(strip=True)
                     if len(title) > 15 and self.is_relevant_tender(title):
@@ -416,15 +415,15 @@ class ComprehensiveScraper:
                         desc_elem = item.select_one('.description, p, .c-teaser__text')
                         original_desc = desc_elem.get_text(strip=True) if desc_elem else ""
                         
-                        # Build description with Tender ID and CPV code info
+                        # Check if search term is a CPV code
+                        is_cpv = search_term in CPV_CODES_BASE
+                        
+                        # Build description
                         desc_parts = []
                         if tender_id:
                             desc_parts.append(f"Bund-ID: {tender_id}")
-                        if cpv_match:
-                            cpv_code = cpv_match.group(1)
-                            cpv_desc = CPV_CODES_BASE.get(cpv_code, '')
-                            if cpv_desc:
-                                desc_parts.append(f"CPV: {cpv_code}")
+                        if is_cpv:
+                            desc_parts.append(f"CPV: {search_term}")
                         desc_parts.append(original_desc or title)
                         description = " | ".join(desc_parts) if desc_parts else f"Bundesausschreibung: {title}"
                         
@@ -450,7 +449,7 @@ class ComprehensiveScraper:
             
             await asyncio.sleep(0.3)
         
-        logger.info(f"Bund.de TOTAL: {len(tenders)} tenders (paginated + CPV code searches)")
+        logger.info(f"Bund.de TOTAL: {len(tenders)} tenders")
         return tenders
 
     async def scrape_evergabe_online(self) -> list:
