@@ -15,6 +15,7 @@ import re
 import logging
 import hashlib
 from difflib import SequenceMatcher
+from playwright.async_api import async_playwright
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
