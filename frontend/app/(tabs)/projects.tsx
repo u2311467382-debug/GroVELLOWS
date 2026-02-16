@@ -257,42 +257,41 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: colors.primary,
-    padding: 16,
-    paddingTop: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: colors.accent,
+  headerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: colors.textLight,
-    marginBottom: 12,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.accent,
   },
   filterContainer: {
     flexDirection: 'row',
-    gap: 8,
-    marginBottom: 8,
+    gap: 6,
   },
   filterButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primaryLight,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
   },
   filterButtonActive: {
     backgroundColor: colors.secondary,
   },
   filterFlag: {
-    fontSize: 16,
+    fontSize: 12,
   },
   filterText: {
-    fontSize: 13,
+    fontSize: 11,
     color: colors.textLight,
     fontWeight: '500',
   },
@@ -300,7 +299,7 @@ const styles = StyleSheet.create({
     color: colors.textWhite,
   },
   resultsCount: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textLight,
   },
   centered: {
