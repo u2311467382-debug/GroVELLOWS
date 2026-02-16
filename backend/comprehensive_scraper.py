@@ -17,6 +17,9 @@ import hashlib
 from difflib import SequenceMatcher
 from playwright.async_api import async_playwright
 
+# Set Playwright browsers path
+os.environ['PLAYWRIGHT_BROWSERS_PATH'] = '/pw-browsers'
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
