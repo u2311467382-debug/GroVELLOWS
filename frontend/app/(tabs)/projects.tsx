@@ -267,9 +267,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: colors.accent,
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#A07D50',  // Exact ochre/gold color matching Tenders page
   },
   filterContainer: {
     flexDirection: 'row',
