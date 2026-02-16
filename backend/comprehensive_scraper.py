@@ -271,6 +271,11 @@ class ComprehensiveScraper:
             if any(kw in text for kw in keywords):
                 return True
         
+        # Check CPV codes - these are construction/project management codes
+        for cpv_code in CPV_CODES_BASE.keys():
+            if cpv_code in text:
+                return True
+        
         # General construction and public tender terms - expanded list
         general_terms = [
             'projektsteuerung', 'projektsteuerungsleistung', 'projektsteuerungsleistungen',
@@ -292,7 +297,10 @@ class ComprehensiveScraper:
             'elektro', 'heizung', 'lüftung', 'sanitär', 'dach', 'fassade',
             'architekturbüro', 'planungsbüro', 'ingenieurbüro',
             # Messe/Exhibition specific
-            'messe', 'messebau', 'messegelände', 'exhibition', 'kongresszentrum'
+            'messe', 'messebau', 'messegelände', 'exhibition', 'kongresszentrum',
+            # TED Europa / EU tender terms (English)
+            'construction management', 'project management', 'architectural', 'engineering',
+            'ted notice', 'eu tender', 'cpv'
         ]
         if any(term in text for term in general_terms):
             return True
