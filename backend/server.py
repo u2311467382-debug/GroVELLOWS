@@ -114,6 +114,7 @@ def validate_password(password: str) -> bool:
 ROLE_PERMISSIONS = {
     "Director": ["read", "write", "delete", "admin", "share", "scrape"],
     "Partner": ["read", "write", "delete", "admin", "share"],
+    "Admin": ["read", "write", "delete", "admin", "share"],  # Admin role with full access like Partner
     "Senior Project Manager": ["read", "write", "share"],
     "Project Manager": ["read", "write", "share"],
     "HR": ["read", "share"],
