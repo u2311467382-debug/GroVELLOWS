@@ -58,6 +58,30 @@ TYPOLOGY_KEYWORDS = {
     'Hospitality': ['hotel', 'gastro', 'restaurant']
 }
 
+# CPV Codes for targeted tender search
+# These codes represent GroVELLOWS core services
+CPV_CODES_BASE = {
+    '71540000': 'Construction management services',
+    '71541000': 'Construction project management services',
+    '72224000': 'Project management consultancy services',
+    '71240000': 'Architectural, engineering and planning services',
+}
+
+def generate_cpv_codes_with_suffixes():
+    """Generate all CPV codes including suffixes -1 through -9"""
+    all_codes = []
+    for base_code, description in CPV_CODES_BASE.items():
+        # Add base code without suffix
+        all_codes.append((base_code, description))
+        # Add codes with suffixes -1 through -9
+        for suffix in range(1, 10):
+            code_with_suffix = f"{base_code}-{suffix}"
+            all_codes.append((code_with_suffix, f"{description} (variant {suffix})"))
+    return all_codes
+
+# Generate all CPV codes with suffixes
+CPV_CODES = generate_cpv_codes_with_suffixes()
+
 # Platform priority for deduplication (higher = better source)
 PLATFORM_PRIORITY = {
     'Bund.de': 100,
