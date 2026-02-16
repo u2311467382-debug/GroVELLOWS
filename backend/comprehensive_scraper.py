@@ -352,79 +352,105 @@ class ComprehensiveScraper:
     # ==================== GERMAN FEDERAL PLATFORMS ====================
     
     async def scrape_bund_de(self) -> list:
-        """Scrape SERVICE.BUND.DE - Federal tenders with pagination"""
+        """Scrape SERVICE.BUND.DE - Federal tenders with pagination and CPV code support"""
         tenders = []
         seen_tender_ids = set()
         
-        # Paginated URLs
+        # Base URL search (existing functionality)
+        base_urls_pages = []
         for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
-            urls = [
+            base_urls_pages.append(
                 f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?nn=4641514&cl2Categories_Typ=vergabe&pageNo={page_num}"
-            ]
+            )
+        
+        # CPV code search URLs (only base codes without suffixes for efficiency)
+        cpv_urls = []
+        for base_code in CPV_CODES_BASE.keys():
+            cpv_urls.append(
+                f"https://www.service.bund.de/Content/DE/Ausschreibungen/Suche/Ergebnis.html?nn=4641514&cl2Categories_Typ=vergabe&searchText={base_code}"
+            )
+        
+        all_urls = base_urls_pages + cpv_urls
+        logger.info(f"Bund.de: Searching {len(base_urls_pages)} paginated pages + {len(cpv_urls)} CPV code searches")
+        
+        for url in all_urls:
+            html = await self.fetch_page(url)
+            if not html:
+                continue
+                
+            soup = BeautifulSoup(html, 'lxml')
+            items = soup.select('.searchResult, .result-item, article, .c-teaser')
             
-            for url in urls:
-                html = await self.fetch_page(url)
-                if not html:
-                    continue
-                    
-                soup = BeautifulSoup(html, 'lxml')
-                items = soup.select('.searchResult, .result-item, article, .c-teaser')
-                
-                if len(items) == 0:
-                    break
-                    
-                logger.info(f"Bund.de (page {page_num}): Found {len(items)} items")
-                
-                for item in items:
-                    title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline')
-                    if title_elem:
-                        title = title_elem.get_text(strip=True)
-                        if len(title) > 15 and self.is_relevant_tender(title):
-                            link = title_elem.get('href', '')
-                            if link and not link.startswith('http'):
-                                link = f"https://www.service.bund.de{link}"
-                            
-                            # Extract tender ID from link
-                            tender_id = None
-                            id_match = re.search(r'/(\d{5,10})(?:/|$|\?|\.)', link)
-                            if id_match:
-                                tender_id = id_match.group(1)
-                            
-                            # Skip duplicates
-                            if tender_id and tender_id in seen_tender_ids:
-                                continue
-                            if tender_id:
-                                seen_tender_ids.add(tender_id)
-                            
-                            desc_elem = item.select_one('.description, p, .c-teaser__text')
-                            original_desc = desc_elem.get_text(strip=True) if desc_elem else ""
-                            
-                            # Build description with Tender ID
-                            description = f"Bund-ID: {tender_id} | {original_desc or title}" if tender_id else (original_desc or f"Bundesausschreibung: {title}")
-                            
-                            cat_info = self.categorize_tender(title, original_desc)
-                            budget = self.extract_budget(f"{title} {original_desc}")
-                            
-                            tenders.append({
-                                'title': title,
-                                'description': description,
-                                'tender_id': tender_id,
-                                'budget': budget,
-                                'deadline': self.extract_deadline(f"{title} {original_desc}"),
-                                'location': 'Deutschland',
-                                'project_type': 'Federal Tender',
-                                'contracting_authority': 'Bundesrepublik Deutschland',
-                                'category': cat_info['category'] or 'Projektmanagement',
-                                'building_typology': cat_info['building_typology'],
-                                'platform_source': 'Bund.de',
-                                'platform_url': 'https://www.service.bund.de',
-                                'direct_link': link,
-                                'country': 'Germany',
-                            })
+            if len(items) == 0:
+                continue
+            
+            # Determine if this is a CPV code search
+            cpv_match = re.search(r'searchText=([0-9]+)', url)
+            cpv_info = f" (CPV: {cpv_match.group(1)})" if cpv_match else ""
+            page_match = re.search(r'pageNo=(\d+)', url)
+            page_info = f" (page {page_match.group(1)})" if page_match else ""
+            
+            logger.info(f"Bund.de{page_info}{cpv_info}: Found {len(items)} items")
+            
+            for item in items:
+                title_elem = item.select_one('h2 a, h3 a, .title a, a.c-teaser__headline')
+                if title_elem:
+                    title = title_elem.get_text(strip=True)
+                    if len(title) > 15 and self.is_relevant_tender(title):
+                        link = title_elem.get('href', '')
+                        if link and not link.startswith('http'):
+                            link = f"https://www.service.bund.de{link}"
+                        
+                        # Extract tender ID from link
+                        tender_id = None
+                        id_match = re.search(r'/(\d{5,10})(?:/|$|\?|\.)', link)
+                        if id_match:
+                            tender_id = id_match.group(1)
+                        
+                        # Skip duplicates
+                        if tender_id and tender_id in seen_tender_ids:
+                            continue
+                        if tender_id:
+                            seen_tender_ids.add(tender_id)
+                        
+                        desc_elem = item.select_one('.description, p, .c-teaser__text')
+                        original_desc = desc_elem.get_text(strip=True) if desc_elem else ""
+                        
+                        # Build description with Tender ID and CPV code info
+                        desc_parts = []
+                        if tender_id:
+                            desc_parts.append(f"Bund-ID: {tender_id}")
+                        if cpv_match:
+                            cpv_code = cpv_match.group(1)
+                            cpv_desc = CPV_CODES_BASE.get(cpv_code, '')
+                            if cpv_desc:
+                                desc_parts.append(f"CPV: {cpv_code}")
+                        desc_parts.append(original_desc or title)
+                        description = " | ".join(desc_parts) if desc_parts else f"Bundesausschreibung: {title}"
+                        
+                        cat_info = self.categorize_tender(title, original_desc)
+                        budget = self.extract_budget(f"{title} {original_desc}")
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': description,
+                            'tender_id': tender_id,
+                            'budget': budget,
+                            'deadline': self.extract_deadline(f"{title} {original_desc}"),
+                            'location': 'Deutschland',
+                            'project_type': 'Federal Tender',
+                            'contracting_authority': 'Bundesrepublik Deutschland',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'Bund.de',
+                            'platform_url': 'https://www.service.bund.de',
+                            'direct_link': link,
+                            'country': 'Germany',
+                        })
             
             await asyncio.sleep(0.3)
         
-        logger.info(f"Bund.de TOTAL: {len(tenders)} tenders (from {self.PAGES_TO_SCRAPE} pages)")
+        logger.info(f"Bund.de TOTAL: {len(tenders)} tenders (paginated + CPV code searches)")
         return tenders
 
     async def scrape_evergabe_online(self) -> list:
