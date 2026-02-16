@@ -746,80 +746,150 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_ted_europa(self) -> list:
-        """Scrape TED Europa - EU tenders with CPV code support"""
+        """Scrape TED Europa - EU tenders for Germany with CPV code support"""
         tenders = []
         
-        # Original keyword-based search URLs
-        keyword_urls = [
-            "https://ted.europa.eu/de/search/result?q=projektmanagement%20deutschland",
-            "https://ted.europa.eu/de/search/result?q=baumanagement%20deutschland",
-            "https://ted.europa.eu/de/search/result?q=bauleitung%20deutschland"
+        # TED Europa search URLs - using the notice search format
+        # Format: /en/notice/-/detail/{notice-id} for individual notices
+        # Search: /en/search/result?q={query}
+        
+        # Direct notice listing URLs for Germany
+        base_urls = [
+            "https://ted.europa.eu/en/search/result?q=projektmanagement&publicationDateFrom=2025-01-01&country=DE",
+            "https://ted.europa.eu/en/search/result?q=baumanagement&publicationDateFrom=2025-01-01&country=DE",
+            "https://ted.europa.eu/en/search/result?q=construction+management&publicationDateFrom=2025-01-01&country=DE",
         ]
         
-        # Generate CPV code search URLs for TED Europa
-        # TED uses cpv parameter for CPV code filtering
-        cpv_urls = []
-        for cpv_code, description in CPV_CODES:
-            # TED Europa CPV search format
-            cpv_urls.append(f"https://ted.europa.eu/de/search/result?cpv={cpv_code}&country=DE")
+        # Add CPV code specific searches for Germany (base codes only for efficiency)
+        for cpv_code in CPV_CODES_BASE.keys():
+            base_urls.append(f"https://ted.europa.eu/en/search/result?q={cpv_code}&publicationDateFrom=2025-01-01&country=DE")
         
-        # Combine all URLs (keyword + CPV codes)
-        all_urls = keyword_urls + cpv_urls
+        logger.info(f"TED Europa (Germany): Searching with {len(base_urls)} URLs")
         
-        logger.info(f"TED Europa: Searching with {len(keyword_urls)} keyword URLs + {len(cpv_urls)} CPV code URLs")
-        
-        for url in all_urls:
+        for url in base_urls:
             html = await self.fetch_page(url)
             if html:
                 soup = BeautifulSoup(html, 'lxml')
-                items = soup.select('.notice-item, .search-result, article, .ted-result')
                 
-                # Extract CPV code from URL for logging
-                cpv_match = re.search(r'cpv=([0-9-]+)', url)
+                # TED uses various selectors - try multiple
+                items = soup.select('a[href*="/notice/"]')
+                
+                cpv_match = re.search(r'q=(\d{8})', url)
                 cpv_info = f" (CPV: {cpv_match.group(1)})" if cpv_match else ""
-                logger.info(f"TED Europa{cpv_info}: Found {len(items)} items")
+                logger.info(f"TED Europa (DE){cpv_info}: Found {len(items)} notice links")
                 
                 for item in items:
-                    title_elem = item.select_one('h2, h3, .title, a.notice-title')
-                    if title_elem:
-                        title = title_elem.get_text(strip=True)
-                        if len(title) > 15 and self.is_relevant_tender(title):
-                            link = title_elem.get('href', '') if title_elem.name == 'a' else ''
-                            if link and not link.startswith('http'):
-                                link = f"https://ted.europa.eu{link}"
+                    href = item.get('href', '')
+                    title = item.get_text(strip=True)
+                    
+                    if len(title) > 15:
+                        if not href.startswith('http'):
+                            href = f"https://ted.europa.eu{href}"
+                        
+                        # Extract notice ID
+                        notice_match = re.search(r'/notice/[^/]+/(\d+-\d+)', href)
+                        notice_id = notice_match.group(1) if notice_match else None
+                        
+                        description = f"TED Notice: {notice_id}" if notice_id else title
+                        if cpv_match:
+                            description = f"CPV: {cpv_match.group(1)} | {description}"
+                        
+                        cat_info = self.categorize_tender(title, description)
+                        
+                        tenders.append({
+                            'title': title,
+                            'description': description,
+                            'budget': self.extract_budget(title),
+                            'deadline': self.extract_deadline(title),
+                            'location': 'Deutschland',
+                            'project_type': 'EU Tender',
+                            'contracting_authority': 'EU Contracting Authority',
+                            'category': cat_info['category'] or 'Projektmanagement',
+                            'building_typology': cat_info['building_typology'],
+                            'platform_source': 'TED Europa',
+                            'platform_url': 'https://ted.europa.eu',
+                            'direct_link': href,
+                            'country': 'Germany',
+                        })
+            
+            await asyncio.sleep(0.3)
+        
+        logger.info(f"TED Europa (Germany) TOTAL: {len(tenders)} tenders")
+        return tenders
+
+    async def scrape_ted_international(self) -> list:
+        """Scrape TED Europa - International tenders (Rest of World/Europe) with CPV code support"""
+        tenders = []
+        
+        # European countries to search (excluding Germany which is handled separately)
+        eu_countries = [
+            ('AT', 'Austria'),
+            ('BE', 'Belgium'),
+            ('NL', 'Netherlands'),
+            ('FR', 'France'),
+            ('IT', 'Italy'),
+            ('ES', 'Spain'),
+            ('PL', 'Poland'),
+            ('CZ', 'Czech Republic'),
+            ('DK', 'Denmark'),
+            ('SE', 'Sweden'),
+            ('FI', 'Finland'),
+            ('PT', 'Portugal'),
+            ('IE', 'Ireland'),
+            ('LU', 'Luxembourg'),
+            ('CH', 'Switzerland'),  # EEA
+            ('NO', 'Norway'),  # EEA
+        ]
+        
+        logger.info(f"TED Europa (International): Searching {len(eu_countries)} countries with {len(CPV_CODES_BASE)} CPV codes")
+        
+        # Search each country with base CPV codes
+        for country_code, country_name in eu_countries:
+            for cpv_code in CPV_CODES_BASE.keys():
+                url = f"https://ted.europa.eu/en/search/result?q={cpv_code}&publicationDateFrom=2025-01-01&country={country_code}"
+                
+                html = await self.fetch_page(url)
+                if html:
+                    soup = BeautifulSoup(html, 'lxml')
+                    items = soup.select('a[href*="/notice/"]')
+                    
+                    if len(items) > 0:
+                        logger.info(f"TED Europa ({country_name}, CPV: {cpv_code}): Found {len(items)} notice links")
+                    
+                    for item in items[:10]:  # Limit per country/CPV combination
+                        href = item.get('href', '')
+                        title = item.get_text(strip=True)
+                        
+                        if len(title) > 15:
+                            if not href.startswith('http'):
+                                href = f"https://ted.europa.eu{href}"
                             
-                            desc_elem = item.select_one('.description, .summary, p')
-                            description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            notice_match = re.search(r'/notice/[^/]+/(\d+-\d+)', href)
+                            notice_id = notice_match.group(1) if notice_match else None
                             
-                            # Add CPV code info to description if from CPV search
-                            if cpv_match:
-                                cpv_code = cpv_match.group(1)
-                                cpv_desc = dict(CPV_CODES).get(cpv_code, '')
-                                if cpv_desc and cpv_code not in description:
-                                    description = f"CPV: {cpv_code} ({cpv_desc}). {description}"
+                            description = f"TED Notice: {notice_id} | CPV: {cpv_code}" if notice_id else f"CPV: {cpv_code} | {title}"
                             
                             cat_info = self.categorize_tender(title, description)
-                            budget = self.extract_budget(f"{title} {description}")
                             
                             tenders.append({
                                 'title': title,
-                                'description': description or f"EU Ausschreibung: {title}",
-                                'budget': budget,
-                                'deadline': self.extract_deadline(f"{title} {description}"),
-                                'location': 'EU/Deutschland',
+                                'description': description,
+                                'budget': self.extract_budget(title),
+                                'deadline': self.extract_deadline(title),
+                                'location': country_name,
                                 'project_type': 'EU Tender',
-                                'contracting_authority': 'EU Contracting Authority',
+                                'contracting_authority': f'{country_name} Authority',
                                 'category': cat_info['category'] or 'Projektmanagement',
                                 'building_typology': cat_info['building_typology'],
                                 'platform_source': 'TED Europa',
                                 'platform_url': 'https://ted.europa.eu',
-                                'direct_link': link,
-                                'country': 'Germany',
+                                'direct_link': href,
+                                'country': 'International',  # Mark as international
                             })
-            
-            await asyncio.sleep(0.3)  # Rate limiting between requests
+                
+                await asyncio.sleep(0.2)  # Rate limiting
         
-        logger.info(f"TED Europa TOTAL: {len(tenders)} tenders (keyword + CPV code searches)")
+        logger.info(f"TED Europa (International) TOTAL: {len(tenders)} tenders from {len(eu_countries)} countries")
         return tenders
 
     async def scrape_ibau(self) -> list:
