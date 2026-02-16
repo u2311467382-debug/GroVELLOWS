@@ -51,6 +51,7 @@ export default function TabsLayout() {
         name="projects"
         options={{
           title: t('developerProjects.title'),
+          headerShown: false,
           tabBarIcon: ({ color, size }) => (
             <BuildingOfficeIcon size={20} color={color} />
           ),
