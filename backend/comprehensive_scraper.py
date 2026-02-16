@@ -717,20 +717,38 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_ted_europa(self) -> list:
-        """Scrape TED Europa - EU tenders"""
+        """Scrape TED Europa - EU tenders with CPV code support"""
         tenders = []
-        urls = [
+        
+        # Original keyword-based search URLs
+        keyword_urls = [
             "https://ted.europa.eu/de/search/result?q=projektmanagement%20deutschland",
             "https://ted.europa.eu/de/search/result?q=baumanagement%20deutschland",
             "https://ted.europa.eu/de/search/result?q=bauleitung%20deutschland"
         ]
         
-        for url in urls:
+        # Generate CPV code search URLs for TED Europa
+        # TED uses cpv parameter for CPV code filtering
+        cpv_urls = []
+        for cpv_code, description in CPV_CODES:
+            # TED Europa CPV search format
+            cpv_urls.append(f"https://ted.europa.eu/de/search/result?cpv={cpv_code}&country=DE")
+        
+        # Combine all URLs (keyword + CPV codes)
+        all_urls = keyword_urls + cpv_urls
+        
+        logger.info(f"TED Europa: Searching with {len(keyword_urls)} keyword URLs + {len(cpv_urls)} CPV code URLs")
+        
+        for url in all_urls:
             html = await self.fetch_page(url)
             if html:
                 soup = BeautifulSoup(html, 'lxml')
                 items = soup.select('.notice-item, .search-result, article, .ted-result')
-                logger.info(f"TED Europa: Found {len(items)} items")
+                
+                # Extract CPV code from URL for logging
+                cpv_match = re.search(r'cpv=([0-9-]+)', url)
+                cpv_info = f" (CPV: {cpv_match.group(1)})" if cpv_match else ""
+                logger.info(f"TED Europa{cpv_info}: Found {len(items)} items")
                 
                 for item in items:
                     title_elem = item.select_one('h2, h3, .title, a.notice-title')
@@ -743,6 +761,13 @@ class ComprehensiveScraper:
                             
                             desc_elem = item.select_one('.description, .summary, p')
                             description = desc_elem.get_text(strip=True) if desc_elem else ""
+                            
+                            # Add CPV code info to description if from CPV search
+                            if cpv_match:
+                                cpv_code = cpv_match.group(1)
+                                cpv_desc = dict(CPV_CODES).get(cpv_code, '')
+                                if cpv_desc and cpv_code not in description:
+                                    description = f"CPV: {cpv_code} ({cpv_desc}). {description}"
                             
                             cat_info = self.categorize_tender(title, description)
                             budget = self.extract_budget(f"{title} {description}")
@@ -763,8 +788,9 @@ class ComprehensiveScraper:
                                 'country': 'Germany',
                             })
             
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.3)  # Rate limiting between requests
         
+        logger.info(f"TED Europa TOTAL: {len(tenders)} tenders (keyword + CPV code searches)")
         return tenders
 
     async def scrape_ibau(self) -> list:
