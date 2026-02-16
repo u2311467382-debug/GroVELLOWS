@@ -82,7 +82,7 @@ const BUILDING_TYPOLOGIES = [
   'Mixed-Use', 'Industrial', 'Infrastructure', 'Education', 'Sports', 'Hospitality'
 ];
 
-const COUNTRIES = ['All', 'Germany', 'Switzerland'];
+const COUNTRIES = ['All', 'Germany', 'Switzerland', 'International'];
 
 const STATUSES = ['All', 'New', 'In Progress', 'Closed'];
 const SORT_OPTIONS = [
