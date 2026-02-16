@@ -774,37 +774,53 @@ class ComprehensiveScraper:
                 
                 logger.info(f"TED Playwright ({country_name}, CPV: {cpv_code}): Found {len(tender_items)} notice links")
                 
+                seen_ids = set()
                 for item in tender_items[:20]:  # Limit per search
                     href = item.get('href', '')
-                    title = item.get_text(strip=True)
+                    notice_text = item.get_text(strip=True)
                     
-                    if len(title) > 15 and title not in ['Previous', 'Next', 'Search']:
-                        if not href.startswith('http'):
-                            href = f"https://ted.europa.eu{href}"
-                        
-                        # Extract notice ID from URL
-                        notice_match = re.search(r'/notice/[^/]+/(\d+-\d+)', href)
-                        notice_id = notice_match.group(1) if notice_match else None
-                        
-                        description = f"TED Notice: {notice_id} | CPV: {cpv_code} ({CPV_CODES_BASE.get(cpv_code, 'Construction services')})" if notice_id else f"CPV: {cpv_code} | {title}"
-                        
-                        cat_info = self.categorize_tender(title, description)
-                        
-                        tenders.append({
-                            'title': title[:200],  # Limit title length
-                            'description': description,
-                            'budget': self.extract_budget(title),
-                            'deadline': self.extract_deadline(title),
-                            'location': country_name,
-                            'project_type': 'EU Tender',
-                            'contracting_authority': f'{country_name} Authority',
-                            'category': cat_info['category'] or 'Projektmanagement',
-                            'building_typology': cat_info['building_typology'],
-                            'platform_source': 'TED Europa',
-                            'platform_url': 'https://ted.europa.eu',
-                            'direct_link': href,
-                            'country': 'Germany' if country_code == 'DE' else 'International',
-                        })
+                    # Skip navigation links
+                    if notice_text in ['Previous', 'Next', 'Search', '']:
+                        continue
+                    
+                    # Extract notice ID from URL
+                    notice_match = re.search(r'/notice/[^/]+/(\d+-\d+)', href)
+                    if not notice_match:
+                        continue
+                    
+                    notice_id = notice_match.group(1)
+                    
+                    # Skip duplicates within same search
+                    if notice_id in seen_ids:
+                        continue
+                    seen_ids.add(notice_id)
+                    
+                    if not href.startswith('http'):
+                        href = f"https://ted.europa.eu{href}"
+                    
+                    # Create meaningful title with notice ID and CPV code
+                    cpv_desc = CPV_CODES_BASE.get(cpv_code, 'Construction management services')
+                    title = f"TED {notice_id} - {cpv_desc}"
+                    description = f"CPV: {cpv_code} ({cpv_desc}) | TED Notice ID: {notice_id} | Source: TED Europa"
+                    
+                    cat_info = self.categorize_tender(title, description)
+                    
+                    tenders.append({
+                        'title': title,
+                        'description': description,
+                        'tender_id': notice_id,
+                        'budget': 'See TED Notice',
+                        'deadline': self.extract_deadline(title),
+                        'location': country_name,
+                        'project_type': 'EU Tender',
+                        'contracting_authority': f'{country_name} Authority',
+                        'category': cat_info['category'] or 'Projektmanagement',
+                        'building_typology': cat_info['building_typology'],
+                        'platform_source': 'TED Europa',
+                        'platform_url': 'https://ted.europa.eu',
+                        'direct_link': href,
+                        'country': 'Germany' if country_code == 'DE' else 'International',
+                    })
                 
                 await browser.close()
                 
