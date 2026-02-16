@@ -606,7 +606,10 @@ class ComprehensiveScraper:
         return tenders
 
     async def scrape_ausschreibungen_deutschland(self) -> list:
-        """Scrape ausschreibungen-deutschland.de - All German States with PAGINATION (5 pages) and CPV code support"""
+        """Scrape ausschreibungen-deutschland.de - All German States with PAGINATION (5 pages)
+        Note: This portal lists CPV codes in tender details, so we scrape by state and the CPV codes
+        will be captured in the tender descriptions/content.
+        """
         tenders = []
         
         # State-specific base URLs
@@ -630,97 +633,9 @@ class ComprehensiveScraper:
             "https://ausschreibungen-deutschland.de/Mecklenburg-Vorpommern",
         ]
         
-        # CPV code search URLs (base codes only for efficiency)
-        cpv_search_urls = []
-        for base_code, description in CPV_CODES_BASE.items():
-            cpv_search_urls.append(
-                f"https://ausschreibungen-deutschland.de/suche/{base_code}"
-            )
-        
         seen_tender_ids = set()  # Track seen tender IDs to avoid duplicates across pages
         
-        # First: Scrape by CPV codes
-        logger.info(f"Ausschreibungen-Deutschland: Starting with {len(cpv_search_urls)} CPV code searches")
-        for cpv_url in cpv_search_urls:
-            cpv_match = re.search(r'/suche/(\d+)', cpv_url)
-            cpv_code = cpv_match.group(1) if cpv_match else ""
-            
-            html = await self.fetch_page(cpv_url)
-            if not html:
-                continue
-                
-            soup = BeautifulSoup(html, 'lxml')
-            all_links = soup.find_all('a', href=True)
-            items = []
-            
-            for link in all_links:
-                href = link.get('href', '')
-                if href and re.match(r'^/2[0-9]{6}_', href):
-                    items.append(link)
-            
-            logger.info(f"Ausschreibungen-Deutschland (CPV: {cpv_code}): Found {len(items)} tender links")
-            
-            for item in items:
-                original_title = item.get_text(strip=True)
-                link_href = item.get('href', '')
-                
-                if len(original_title) < 10:
-                    continue
-                
-                if link_href and not link_href.startswith('http'):
-                    link_href = f"https://ausschreibungen-deutschland.de{link_href}"
-                
-                tender_id = None
-                id_match = re.search(r'/(\d{7})_', link_href)
-                if id_match:
-                    tender_id = id_match.group(1)
-                
-                if tender_id and tender_id in seen_tender_ids:
-                    continue
-                if tender_id:
-                    seen_tender_ids.add(tender_id)
-                
-                if self.is_relevant_tender(original_title):
-                    year_match = re.search(r'_(\d{4})_([A-Za-z-]+)$', link_href)
-                    publication_year = None
-                    location = 'Deutschland'
-                    if year_match:
-                        try:
-                            publication_year = int(year_match.group(1))
-                        except:
-                            pass
-                        location = year_match.group(2).replace('_', ' ').replace('-', ' ')
-                    
-                    if publication_year and publication_year < 2026:
-                        continue
-                    
-                    cat_info = self.categorize_tender(original_title)
-                    budget = self.extract_budget(original_title)
-                    
-                    # Include CPV code in description
-                    cpv_desc = CPV_CODES_BASE.get(cpv_code, '')
-                    description = f"Ausschreibungs-ID: {tender_id} | CPV: {cpv_code} | {original_title}" if tender_id else original_title
-                    
-                    tenders.append({
-                        'title': original_title,
-                        'description': description,
-                        'tender_id': tender_id,
-                        'budget': budget,
-                        'deadline': self.extract_deadline(original_title),
-                        'location': location,
-                        'project_type': 'Public Tender',
-                        'contracting_authority': 'Öffentlicher Auftraggeber',
-                        'category': cat_info['category'] or 'Projektmanagement',
-                        'building_typology': cat_info['building_typology'],
-                        'platform_source': 'Ausschreibungen Deutschland',
-                        'platform_url': 'https://ausschreibungen-deutschland.de/',
-                        'direct_link': link_href,
-                        'country': 'Germany',
-                    })
-            
-            await asyncio.sleep(0.3)
-        
-        # Second: Continue with state-based pagination scraping
+        # Scrape by state with pagination
         for base_url in state_base_urls:
             # Scrape multiple pages (pagination)
             for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
