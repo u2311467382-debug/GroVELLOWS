@@ -792,7 +792,8 @@ class ComprehensiveScraper:
                         continue
                     
                     # Extract notice ID from URL
-                    notice_match = re.search(r'/notice/[^/]+/(\d+-\d+)', href)
+                    # URL format: /en/notice/-/detail/110672-2026
+                    notice_match = re.search(r'/detail/(\d+-\d+)', href)
                     if not notice_match:
                         continue
                     
