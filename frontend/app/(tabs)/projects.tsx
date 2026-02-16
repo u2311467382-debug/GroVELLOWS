@@ -184,31 +184,32 @@ export default function ProjectsScreen() {
     <SafeAreaView style={styles.container}>
       {/* Header with Region Filters */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Developer Projects</Text>
-        <Text style={styles.headerSubtitle}>Track construction projects from German developers</Text>
-        
-        {/* Region Filter Buttons */}
-        <View style={styles.filterContainer}>
-          {REGIONS.map((region) => (
-            <TouchableOpacity
-              key={region.id}
-              style={[
-                styles.filterButton,
-                selectedRegion === region.id && styles.filterButtonActive,
-              ]}
-              onPress={() => handleRegionChange(region.id)}
-            >
-              <Text style={styles.filterFlag}>{region.flag}</Text>
-              <Text
+        <View style={styles.headerRow}>
+          <Text style={styles.headerTitle}>Developer Projects</Text>
+          
+          {/* Region Filter Buttons - inline with title */}
+          <View style={styles.filterContainer}>
+            {REGIONS.map((region) => (
+              <TouchableOpacity
+                key={region.id}
                 style={[
-                  styles.filterText,
-                  selectedRegion === region.id && styles.filterTextActive,
+                  styles.filterButton,
+                  selectedRegion === region.id && styles.filterButtonActive,
                 ]}
+                onPress={() => handleRegionChange(region.id)}
               >
-                {region.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+                <Text style={styles.filterFlag}>{region.flag}</Text>
+                <Text
+                  style={[
+                    styles.filterText,
+                    selectedRegion === region.id && styles.filterTextActive,
+                  ]}
+                >
+                  {region.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
         
         {/* Results count */}
