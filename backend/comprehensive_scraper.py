@@ -856,24 +856,16 @@ class ComprehensiveScraper:
         """Scrape TED Europa - International tenders with CPV codes using Playwright"""
         tenders = []
         
-        # European countries to search (excluding Germany)
+        # European countries to search (most relevant for construction management)
+        # Prioritized by proximity and business relevance to Germany
         eu_countries = [
             ('AT', 'Austria'),
-            ('BE', 'Belgium'),
             ('NL', 'Netherlands'),
+            ('BE', 'Belgium'),
             ('FR', 'France'),
-            ('IT', 'Italy'),
-            ('ES', 'Spain'),
             ('PL', 'Poland'),
-            ('CZ', 'Czech Republic'),
             ('DK', 'Denmark'),
-            ('SE', 'Sweden'),
-            ('FI', 'Finland'),
-            ('PT', 'Portugal'),
-            ('IE', 'Ireland'),
-            ('LU', 'Luxembourg'),
-            ('CH', 'Switzerland'),
-            ('NO', 'Norway'),
+            ('CH', 'Switzerland'),  # Not EU but EEA, important for Swiss tenders
         ]
         
         logger.info(f"TED Europa (International): Starting Playwright scrape for {len(eu_countries)} countries with {len(CPV_CODES_BASE)} CPV codes")
