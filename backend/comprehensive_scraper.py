@@ -807,10 +807,11 @@ class ComprehensiveScraper:
                     if not href.startswith('http'):
                         href = f"https://ted.europa.eu{href}"
                     
-                    # Create meaningful title with notice ID and CPV code
+                    # Create meaningful title with notice ID, country and CPV code
                     cpv_desc = CPV_CODES_BASE.get(cpv_code, 'Construction management services')
-                    title = f"TED {notice_id} - {cpv_desc}"
-                    description = f"CPV: {cpv_code} ({cpv_desc}) | TED Notice ID: {notice_id} | Source: TED Europa"
+                    # Include country in title to make it unique for deduplication
+                    title = f"TED {notice_id} ({country_name}) - {cpv_desc}"
+                    description = f"CPV: {cpv_code} ({cpv_desc}) | TED Notice ID: {notice_id} | Country: {country_name} | Source: TED Europa"
                     
                     cat_info = self.categorize_tender(title, description)
                     
