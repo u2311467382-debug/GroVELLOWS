@@ -73,6 +73,9 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "EXPO_PUBLIC_BACKEND_URL": "https://grovellows-dev.preview.emergentagent.com"
     }
   }
 }
