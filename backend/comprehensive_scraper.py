@@ -2163,20 +2163,26 @@ class ComprehensiveScraper:
         
         for tender in all_tenders:
             title_hash = self.get_title_hash(tender['title'])
+            country = tender.get('country', 'Germany')
             
-            # Check if we've seen a similar tender
+            # Create a unique key including country to prevent cross-country deduplication
+            unique_key = f"{title_hash}_{country}"
+            
+            # Check if we've seen a similar tender from the SAME country
             found_duplicate = False
-            for existing_hash, existing_tender in list(unique_tenders.items()):
-                if self.is_similar_title(tender['title'], existing_tender['title']):
+            for existing_key, existing_tender in list(unique_tenders.items()):
+                existing_country = existing_tender.get('country', 'Germany')
+                
+                # Only deduplicate within the same country
+                if country == existing_country and self.is_similar_title(tender['title'], existing_tender['title']):
                     # Keep the one with higher priority platform
                     current_priority = PLATFORM_PRIORITY.get(tender['platform_source'], 50)
                     existing_priority = PLATFORM_PRIORITY.get(existing_tender['platform_source'], 50)
                     
                     if current_priority > existing_priority:
                         # Replace with higher priority source
-                        # But track that it exists on multiple platforms
                         tender['duplicate_sources'] = existing_tender.get('duplicate_sources', []) + [existing_tender['platform_source']]
-                        unique_tenders[existing_hash] = tender
+                        unique_tenders[existing_key] = tender
                     else:
                         # Keep existing but note the duplicate
                         existing_tender['duplicate_sources'] = existing_tender.get('duplicate_sources', []) + [tender['platform_source']]
@@ -2185,7 +2191,7 @@ class ComprehensiveScraper:
                     break
             
             if not found_duplicate:
-                unique_tenders[title_hash] = tender
+                unique_tenders[unique_key] = tender
         
         logger.info(f"Deduplication: {len(all_tenders)} -> {len(unique_tenders)} unique tenders")
         return list(unique_tenders.values())
