@@ -649,7 +649,7 @@ export default function TendersScreen() {
                           selectedCountry === country && styles.filterChipTextActive,
                         ]}
                       >
-                        {country === 'Germany' ? '🇩🇪 Germany' : country === 'Switzerland' ? '🇨🇭 Switzerland' : country}
+                        {country === 'Germany' ? '🇩🇪 Germany' : country === 'Switzerland' ? '🇨🇭 Switzerland' : country === 'International' ? '🌍 International' : country}
                       </Text>
                     </TouchableOpacity>
                   ))}
