@@ -280,7 +280,7 @@ export default function TendersScreen() {
   const clearFilters = () => {
     setSelectedCategory('All');
     setSelectedStatus('All');
-    setSelectedTypology('All');
+    setSelectedTypologies([]);
     setSelectedCountry('All');
     setSearchQuery('');
     setSortBy('date_desc');
