@@ -726,25 +726,28 @@ export default function TendersScreen() {
               <View style={styles.filterSection}>
                 <Text style={styles.filterLabel}>Country / Platform</Text>
                 <View style={styles.filterGrid}>
-                  {COUNTRIES.map((country) => (
-                    <TouchableOpacity
-                      key={country}
-                      style={[
-                        styles.filterChip,
-                        selectedCountry === country && styles.filterChipActive,
-                      ]}
-                      onPress={() => setSelectedCountry(country)}
-                    >
-                      <Text
+                  {COUNTRIES.map((country) => {
+                    const count = getFilterCount(tenders, 'country', country);
+                    return (
+                      <TouchableOpacity
+                        key={country}
                         style={[
-                          styles.filterChipText,
-                          selectedCountry === country && styles.filterChipTextActive,
+                          styles.filterChip,
+                          selectedCountry === country && styles.filterChipActive,
                         ]}
+                        onPress={() => setSelectedCountry(country)}
                       >
-                        {country === 'Germany' ? '🇩🇪 Germany' : country === 'Switzerland' ? '🇨🇭 Switzerland' : country === 'International' ? '🌍 International' : country}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            selectedCountry === country && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {country === 'Germany' ? '🇩🇪 Germany' : country === 'Switzerland' ? '🇨🇭 Switzerland' : country} ({count})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
             </ScrollView>
