@@ -132,7 +132,7 @@ export default function TendersScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [selectedTypology, setSelectedTypology] = useState('All');
+  const [selectedTypologies, setSelectedTypologies] = useState<string[]>([]);  // Multi-select
   const [selectedCountry, setSelectedCountry] = useState('All');
   const [sortBy, setSortBy] = useState('date_desc');
   const [showFilters, setShowFilters] = useState(false);
@@ -140,6 +140,34 @@ export default function TendersScreen() {
   const [applyingId, setApplyingId] = useState<string | null>(null);
   const router = useRouter();
   const { t } = useTranslation();
+
+  // Toggle typology selection (multi-select)
+  const toggleTypology = (typology: string) => {
+    if (typology === 'All') {
+      setSelectedTypologies([]);
+    } else {
+      setSelectedTypologies(prev => 
+        prev.includes(typology) 
+          ? prev.filter(t => t !== typology)
+          : [...prev, typology]
+      );
+    }
+  };
+
+  // Check if typology matches tender (including Hochbau/Tiefbau search)
+  const matchesTypology = (tender: Tender, typology: string): boolean => {
+    if (typology === 'Hochbau') {
+      return tender.title?.toLowerCase().includes('hochbau') || 
+             tender.description?.toLowerCase().includes('hochbau') ||
+             tender.building_typology === 'Hochbau';
+    }
+    if (typology === 'Tiefbau') {
+      return tender.title?.toLowerCase().includes('tiefbau') || 
+             tender.description?.toLowerCase().includes('tiefbau') ||
+             tender.building_typology === 'Tiefbau';
+    }
+    return tender.building_typology === typology;
+  };
 
   useEffect(() => {
     fetchTenders();
