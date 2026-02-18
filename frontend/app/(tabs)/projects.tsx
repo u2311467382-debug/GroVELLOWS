@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   SafeAreaView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { BuildingOfficeIcon, MapPinIcon, CurrencyEuroIcon, CalendarIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
