@@ -504,19 +504,43 @@ export default function TendersScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickFilterChip, selectedTypology === 'Healthcare' && styles.quickFilterChipActive]}
-            onPress={() => setSelectedTypology(selectedTypology === 'Healthcare' ? 'All' : 'Healthcare')}
+            style={[styles.quickFilterChip, selectedTypologies.includes('Healthcare') && styles.quickFilterChipActive]}
+            onPress={() => toggleTypology('Healthcare')}
           >
-            <Ionicons name="medkit" size={14} color={selectedTypology === 'Healthcare' ? colors.textWhite : colors.primary} />
-            <Text style={[styles.quickFilterText, selectedTypology === 'Healthcare' && styles.quickFilterTextActive]}>Hospital</Text>
+            <Ionicons name="medkit" size={14} color={selectedTypologies.includes('Healthcare') ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypologies.includes('Healthcare') && styles.quickFilterTextActive]}>
+              Hospital ({getFilterCount(tenders, 'typology', 'Healthcare')})
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.quickFilterChip, selectedTypology === 'Infrastructure' && styles.quickFilterChipActive]}
-            onPress={() => setSelectedTypology(selectedTypology === 'Infrastructure' ? 'All' : 'Infrastructure')}
+            style={[styles.quickFilterChip, selectedTypologies.includes('Hochbau') && styles.quickFilterChipActive]}
+            onPress={() => toggleTypology('Hochbau')}
           >
-            <Ionicons name="business" size={14} color={selectedTypology === 'Infrastructure' ? colors.textWhite : colors.primary} />
-            <Text style={[styles.quickFilterText, selectedTypology === 'Infrastructure' && styles.quickFilterTextActive]}>Infrastruktur</Text>
+            <Ionicons name="home" size={14} color={selectedTypologies.includes('Hochbau') ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypologies.includes('Hochbau') && styles.quickFilterTextActive]}>
+              Hochbau ({getFilterCount(tenders, 'typology', 'Hochbau')})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickFilterChip, selectedTypologies.includes('Tiefbau') && styles.quickFilterChipActive]}
+            onPress={() => toggleTypology('Tiefbau')}
+          >
+            <Ionicons name="construct" size={14} color={selectedTypologies.includes('Tiefbau') ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypologies.includes('Tiefbau') && styles.quickFilterTextActive]}>
+              Tiefbau ({getFilterCount(tenders, 'typology', 'Tiefbau')})
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.quickFilterChip, selectedTypologies.includes('Infrastructure') && styles.quickFilterChipActive]}
+            onPress={() => toggleTypology('Infrastructure')}
+          >
+            <Ionicons name="business" size={14} color={selectedTypologies.includes('Infrastructure') ? colors.textWhite : colors.primary} />
+            <Text style={[styles.quickFilterText, selectedTypologies.includes('Infrastructure') && styles.quickFilterTextActive]}>
+              Infrastruktur ({getFilterCount(tenders, 'typology', 'Infrastructure')})
+            </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -531,7 +555,7 @@ export default function TendersScreen() {
             <Text style={[styles.quickFilterText, viewMode === 'compact' && styles.quickFilterTextActive]}>View</Text>
           </TouchableOpacity>
 
-          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All' || searchQuery) && (
+          {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypologies.length > 0 || searchQuery) && (
             <TouchableOpacity style={styles.clearButton} onPress={clearFilters}>
               <Ionicons name="close" size={14} color={colors.error} />
               <Text style={styles.clearButtonText}>Clear</Text>
