@@ -821,22 +821,40 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 14,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 3,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0px 1px 3px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   compactCard: {
     backgroundColor: colors.card,
     borderRadius: 10,
     padding: 12,
     marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 1,
+      },
+      web: {
+        boxShadow: '0px 1px 2px rgba(0, 0, 0, 0.05)',
+      },
+    }),
   },
   compactHeader: {
     flexDirection: 'row',
