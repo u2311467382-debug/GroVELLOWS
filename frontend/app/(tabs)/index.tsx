@@ -480,7 +480,7 @@ export default function TendersScreen() {
             onPress={() => setShowFilters(true)}
           >
             <Ionicons name="options" size={20} color="#FFFFFF" />
-            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypology !== 'All') && (
+            {(selectedCategory !== 'All' || selectedStatus !== 'All' || selectedTypologies.length > 0) && (
               <View style={styles.filterDot} />
             )}
           </TouchableOpacity>
