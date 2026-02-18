@@ -79,7 +79,7 @@ const CATEGORIES = [
 ];
 
 const BUILDING_TYPOLOGIES = [
-  'All', 'Healthcare', 'Data Center', 'Residential', 'Commercial', 
+  'All', 'Healthcare', 'Hochbau', 'Tiefbau', 'Data Center', 'Residential', 'Commercial', 
   'Mixed-Use', 'Industrial', 'Infrastructure', 'Education', 'Sports', 'Hospitality'
 ];
 
@@ -92,6 +92,37 @@ const SORT_OPTIONS = [
   { label: 'Budget High-Low', value: 'budget_desc' },
   { label: 'Budget Low-High', value: 'budget_asc' },
 ];
+
+// Helper to get count of tenders for a filter
+const getFilterCount = (tenders: Tender[], filterType: string, filterValue: string): number => {
+  if (filterValue === 'All') return tenders.length;
+  
+  switch (filterType) {
+    case 'typology':
+      // For Hochbau and Tiefbau, search in title and description
+      if (filterValue === 'Hochbau') {
+        return tenders.filter(t => 
+          t.title?.toLowerCase().includes('hochbau') || 
+          t.description?.toLowerCase().includes('hochbau') ||
+          t.building_typology === 'Hochbau'
+        ).length;
+      }
+      if (filterValue === 'Tiefbau') {
+        return tenders.filter(t => 
+          t.title?.toLowerCase().includes('tiefbau') || 
+          t.description?.toLowerCase().includes('tiefbau') ||
+          t.building_typology === 'Tiefbau'
+        ).length;
+      }
+      return tenders.filter(t => t.building_typology === filterValue).length;
+    case 'status':
+      return tenders.filter(t => t.status === filterValue).length;
+    case 'country':
+      return tenders.filter(t => t.country === filterValue).length;
+    default:
+      return 0;
+  }
+};
 
 export default function TendersScreen() {
   const [tenders, setTenders] = useState<Tender[]>([]);
