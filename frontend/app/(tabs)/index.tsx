@@ -243,9 +243,11 @@ export default function TendersScreen() {
       filtered = filtered.filter((tender) => tender.status === selectedStatus);
     }
 
-    // Building typology filter
-    if (selectedTypology !== 'All') {
-      filtered = filtered.filter((tender) => tender.building_typology === selectedTypology);
+    // Building typology filter (multi-select)
+    if (selectedTypologies.length > 0) {
+      filtered = filtered.filter((tender) => 
+        selectedTypologies.some(typology => matchesTypology(tender, typology))
+      );
     }
 
     // Note: Country filter is handled by API call in fetchTenders
