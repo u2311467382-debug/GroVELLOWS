@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-02-18T11:10:51.198386",
+  "backend_url": "https://grovellows-dev.preview.emergentagent.com/api",
+  "total_tests": 10,
+  "passed": 10,
+  "failed": 0,
+  "success_rate": 100.0,
+  "test_results": [
+    {
+      "test": "Director Authentication",
+      "status": "PASS",
+      "details": "Login successful with role: Director",
+      "timestamp": "2026-02-18T11:10:50.497424"
+    },
+    {
+      "test": "Protected Endpoint Access",
+      "status": "PASS",
+      "details": "User: director@grovellows.de - Role: Director",
+      "timestamp": "2026-02-18T11:10:50.556134"
+    },
+    {
+      "test": "Tenders API Structure",
+      "status": "PASS",
+      "details": "All required fields present. Sample tender: Generalsanierung Mittelschulcampus Tutzing - Bodenbeschichtung",
+      "timestamp": "2026-02-18T11:10:50.699226"
+    },
+    {
+      "test": "Tenders API Basic",
+      "status": "PASS",
+      "details": "Retrieved 1000 tenders successfully",
+      "timestamp": "2026-02-18T11:10:50.699234"
+    },
+    {
+      "test": "Germany Country Filter",
+      "status": "PASS",
+      "details": "Found 1000 German tenders",
+      "timestamp": "2026-02-18T11:10:50.862353"
+    },
+    {
+      "test": "Switzerland Country Filter",
+      "status": "PASS",
+      "details": "Found 25 Swiss tenders",
+      "timestamp": "2026-02-18T11:10:50.942349"
+    },
+    {
+      "test": "International Country Filter",
+      "status": "PASS",
+      "details": "Found 14 tenders. Has country='International': True",
+      "timestamp": "2026-02-18T11:10:50.995729"
+    },
+    {
+      "test": "Developer Projects API",
+      "status": "PASS",
+      "details": "Found 11 projects. Sample: CESA Group - Quartier Belsenpark D\u00fcsseldorf",
+      "timestamp": "2026-02-18T11:10:51.055827"
+    },
+    {
+      "test": "Favorites API",
+      "status": "PASS",
+      "details": "Endpoint working but no favorites found for current user",
+      "timestamp": "2026-02-18T11:10:51.109505"
+    },
+    {
+      "test": "Market News API",
+      "status": "PASS",
+      "details": "Found 100 articles with proper structure",
+      "timestamp": "2026-02-18T11:10:51.198177"
+    }
+  ]
+}
