@@ -175,7 +175,7 @@ export default function TendersScreen() {
 
   useEffect(() => {
     filterAndSortTenders();
-  }, [tenders, searchQuery, selectedCategory, selectedStatus, selectedTypology, sortBy]);
+  }, [tenders, searchQuery, selectedCategory, selectedStatus, selectedTypologies, sortBy]);
 
   const fetchTenders = async (country?: string) => {
     try {
