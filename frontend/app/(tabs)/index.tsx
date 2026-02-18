@@ -690,29 +690,35 @@ export default function TendersScreen() {
                 </View>
               </View>
 
-              {/* Building Typology Section */}
+              {/* Building Typology Section - Multi-select */}
               <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Building Type</Text>
+                <Text style={styles.filterLabel}>Building Type (Multi-select)</Text>
                 <View style={styles.filterGrid}>
-                  {BUILDING_TYPOLOGIES.map((typology) => (
-                    <TouchableOpacity
-                      key={typology}
-                      style={[
-                        styles.filterChip,
-                        selectedTypology === typology && styles.filterChipActive,
-                      ]}
-                      onPress={() => setSelectedTypology(typology)}
-                    >
-                      <Text
+                  {BUILDING_TYPOLOGIES.map((typology) => {
+                    const isSelected = typology === 'All' 
+                      ? selectedTypologies.length === 0 
+                      : selectedTypologies.includes(typology);
+                    const count = getFilterCount(tenders, 'typology', typology);
+                    return (
+                      <TouchableOpacity
+                        key={typology}
                         style={[
-                          styles.filterChipText,
-                          selectedTypology === typology && styles.filterChipTextActive,
+                          styles.filterChip,
+                          isSelected && styles.filterChipActive,
                         ]}
+                        onPress={() => toggleTypology(typology)}
                       >
-                        {typology}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            isSelected && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {typology} ({count})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
