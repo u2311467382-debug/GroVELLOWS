@@ -1308,10 +1308,19 @@ async def get_shares(
         {"shared_with": str(current_user["_id"])}
     ).sort("created_at", -1).to_list(1000)
     
-    # Convert ObjectId to string for JSON serialization
+    # Convert ObjectId to string and add sharer name
     for share in shares:
         share["id"] = str(share["_id"])
         del share["_id"]
+        
+        # Get sharer's name
+        if "shared_by" in share:
+            try:
+                sharer = await db.users.find_one({"_id": ObjectId(share["shared_by"])})
+                if sharer:
+                    share["shared_by_name"] = sharer.get("name", "Team member")
+            except:
+                share["shared_by_name"] = "Team member"
     
     return shares
 
