@@ -247,8 +247,11 @@ export default function TendersScreen() {
     }
 
     // Category filter
-    if (selectedCategory !== 'All') {
-      filtered = filtered.filter((tender) => tender.category === selectedCategory);
+    // Category/Service filter (multi-select)
+    if (selectedCategories.length > 0) {
+      filtered = filtered.filter((tender) => 
+        selectedCategories.some(cat => tender.category === cat)
+      );
     }
 
     // Status filter
