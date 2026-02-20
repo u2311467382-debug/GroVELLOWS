@@ -566,17 +566,20 @@ export default function TenderDetailScreen() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity 
-            style={styles.shareButton}
-            onPress={() => setShowShareModal(true)}
-          >
-            <Ionicons name="share-social" size={20} color={colors.primary} />
-            <Text style={styles.shareButtonText}>Share with Team</Text>
-          </TouchableOpacity>
+          {/* Share Button - Only for Director and Partner */}
+          {canShare && (
+            <TouchableOpacity 
+              style={styles.shareButton}
+              onPress={() => setShowShareModal(true)}
+            >
+              <Ionicons name="share-social" size={20} color={colors.primary} />
+              <Text style={styles.shareButtonText}>Share with Team</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Employee List for Sharing */}
-        {showShareModal && (
+        {/* Employee List for Sharing - Only for Director and Partner */}
+        {canShare && showShareModal && (
           <View style={styles.shareModal}>
             <View style={styles.shareModalHeader}>
               <Text style={styles.shareModalTitle}>Share Tender</Text>
