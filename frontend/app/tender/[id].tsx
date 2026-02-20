@@ -579,11 +579,34 @@ export default function TenderDetailScreen() {
         {showShareModal && (
           <View style={styles.shareModal}>
             <View style={styles.shareModalHeader}>
-              <Text style={styles.shareModalTitle}>Share with Team Member</Text>
+              <Text style={styles.shareModalTitle}>Share Tender</Text>
               <TouchableOpacity onPress={() => setShowShareModal(false)}>
                 <Ionicons name="close" size={24} color={colors.textDark} />
               </TouchableOpacity>
             </View>
+
+            {/* WhatsApp Share Option */}
+            <TouchableOpacity 
+              style={styles.whatsappButton}
+              onPress={handleShareViaWhatsApp}
+            >
+              <View style={[styles.employeeAvatar, { backgroundColor: '#25D366' }]}>
+                <Ionicons name="logo-whatsapp" size={24} color="#FFFFFF" />
+              </View>
+              <View style={styles.employeeInfo}>
+                <Text style={styles.employeeName}>Share via WhatsApp</Text>
+                <Text style={styles.employeeRole}>Send to any contact</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={20} color={colors.textLight} />
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>Or share with team</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Team Members */}
             {employees.map((emp) => (
               <TouchableOpacity 
                 key={emp.id}
