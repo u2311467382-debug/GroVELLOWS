@@ -154,6 +154,19 @@ export default function TendersScreen() {
     }
   };
 
+  // Toggle category/service selection (multi-select)
+  const toggleCategory = (category: string) => {
+    if (category === 'All') {
+      setSelectedCategories([]);
+    } else {
+      setSelectedCategories(prev => 
+        prev.includes(category) 
+          ? prev.filter(c => c !== category)
+          : [...prev, category]
+      );
+    }
+  };
+
   // Check if typology matches tender (including Hochbau/Tiefbau search)
   const matchesTypology = (tender: Tender, typology: string): boolean => {
     if (typology === 'Hochbau') {
