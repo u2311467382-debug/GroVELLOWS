@@ -654,29 +654,37 @@ export default function TendersScreen() {
                 ))}
               </View>
 
-              {/* Category Section */}
+              {/* Services Section - Multi-select */}
               <View style={styles.filterSection}>
-                <Text style={styles.filterLabel}>Category</Text>
+                <Text style={styles.filterLabel}>Services (Multi-select)</Text>
                 <View style={styles.filterGrid}>
-                  {CATEGORIES.map((cat) => (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[
-                        styles.filterChip,
-                        selectedCategory === cat && styles.filterChipActive,
-                      ]}
-                      onPress={() => setSelectedCategory(cat)}
-                    >
-                      <Text
+                  {CATEGORIES.map((cat) => {
+                    const isSelected = cat === 'All' 
+                      ? selectedCategories.length === 0 
+                      : selectedCategories.includes(cat);
+                    const count = cat === 'All' 
+                      ? tenders.length 
+                      : tenders.filter(t => t.category === cat).length;
+                    return (
+                      <TouchableOpacity
+                        key={cat}
                         style={[
-                          styles.filterChipText,
-                          selectedCategory === cat && styles.filterChipTextActive,
+                          styles.filterChip,
+                          isSelected && styles.filterChipActive,
                         ]}
+                        onPress={() => toggleCategory(cat)}
                       >
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.filterChipText,
+                            isSelected && styles.filterChipTextActive,
+                          ]}
+                        >
+                          {cat} ({count})
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               </View>
 
