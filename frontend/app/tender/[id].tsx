@@ -211,6 +211,27 @@ export default function TenderDetailScreen() {
     }
   };
 
+  const handleShareViaWhatsApp = () => {
+    const tenderUrl = tender?.direct_link || tender?.platform_url || `https://grovellows-dev.preview.emergentagent.com/tender/${id}`;
+    const message = `*GroVELLOWS Tender*\n\n📋 ${tender?.title}\n\n💰 Budget: ${tender?.budget}\n📍 Location: ${tender?.location}\n📅 Deadline: ${tender?.deadline ? format(new Date(tender.deadline), 'dd MMM yyyy') : 'N/A'}\n\n🔗 View Tender: ${tenderUrl}`;
+    const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
+    
+    Linking.canOpenURL(whatsappUrl)
+      .then((supported) => {
+        if (supported) {
+          return Linking.openURL(whatsappUrl);
+        } else {
+          // Fallback for web
+          const webWhatsapp = `https://wa.me/?text=${encodeURIComponent(message)}`;
+          Linking.openURL(webWhatsapp);
+        }
+      })
+      .catch((err) => {
+        console.error('Error opening WhatsApp:', err);
+        Alert.alert('Error', 'Could not open WhatsApp');
+      });
+  };
+
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
     try {
