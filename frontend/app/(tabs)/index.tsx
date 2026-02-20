@@ -294,7 +294,7 @@ export default function TendersScreen() {
   };
 
   const clearFilters = () => {
-    setSelectedCategory('All');
+    setSelectedCategories([]);
     setSelectedStatus('All');
     setSelectedTypologies([]);
     setSelectedCountry('All');
