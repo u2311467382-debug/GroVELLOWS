@@ -11,6 +11,7 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
 - **User Permissions**: Granular `can_share` flag for sharing rights
 - **International Tenders**: CPV-based search across European countries via TED portal
 - **Real-Time Push Notifications**: Instant alerts when new tenders are scraped
+- **Tender Claim & Chat**: Team members can claim tenders and discuss via chat
 
 ## Technical Architecture
 - **Frontend**: Expo/React Native (web + mobile)
@@ -20,55 +21,41 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
 
 ## What's Been Implemented
 
-### February 23, 2026 - Robustness, Scraper Fixes & Push Notifications
+### February 23, 2026 - Latest Session
 
 #### Completed
-1. **Backend Optimizations for Concurrent Users**
-   - MongoDB connection pooling (50 max, 10 min connections)
-   - Database indexes on frequently queried fields
+1. **simap.ch Swiss Tender Scraping (FIXED)**
+   - Updated scraper to use current simap.ch portal (not archive)
+   - Successfully scraped 40 Swiss tenders from simap.ch
+   - Proper 2026+ date filtering
+   - Categories: Bauarbeiten, Hochbau, Tiefbau, Architektur
+
+2. **Tender Claim & Chat UI**
+   - Added "Claim Tender" button for team coordination
+   - Added "Team Discussion" collapsible chat section
+   - Chat with message history and real-time input
+   - Shows who claimed each tender
+
+3. **Real-Time Push Notifications (Backend Complete)**
+   - Push token registration/unregistration endpoints
+   - `send_push_notifications()` using Expo Push Service
+   - Auto-notify users when new tenders scraped
+   - Frontend NotificationContext and service implemented
+
+4. **Backend Optimizations**
+   - MongoDB connection pooling
+   - Database indexes on filter fields
    - API pagination (default 1000, max 5000)
-   - In-memory caching for users and stats endpoints
-   - Rate limiting on API endpoints
-   - Health check (`/api/health`) and stats (`/api/stats`) endpoints
+   - Caching for users/stats endpoints
+   - Rate limiting
 
-2. **Scraper Fixes**
-   - Fixed simap.ch scraper to use current portal (not archive)
-   - Added strict 2026+ date filtering for Swiss tenders
-   - Deleted 31 old tenders from database (before 2026)
-   - All tenders now show valid 2026+ deadlines
-
-3. **Real-Time Push Notifications**
-   - Backend: Push token registration/unregistration endpoints
-   - Backend: `send_push_notifications()` function using Expo Push Service
-   - Backend: Auto-notify users when new tenders are scraped
-   - Frontend: NotificationContext for handling notifications
-   - Frontend: notifications.ts service for token management
-   - Integration: Scraper triggers push notifications for new tenders
-
-4. **Developer Projects Feature Enhanced**
-   - 19 realistic German developer projects
-   - Coverage: NRW (8), Brandenburg (7), Berlin (3)
-   - Timeline visualization with phase progress
-
-5. **Bug Fixes**
-   - Fixed API URL resolution for web builds
-   - Fixed login button click handling
-   - Fixed users API (handle missing `created_at` field)
-
-### Previous Sessions
-- Playwright-based TED Europa scraper
-- CPV code search functionality
-- Multi-select filters with dynamic counts
-- "Shared with me" feature
-- Conditional share button based on `can_share` permission
-- WhatsApp sharing option
-
-## Push Notification API Endpoints
-- `POST /api/push-tokens` - Register push token
-- `DELETE /api/push-tokens/{user_id}` - Unregister tokens (logout)
-- `GET /api/push-tokens/status` - Get notification status
-- `POST /api/notifications/send` - Send notifications (admin)
-- `POST /api/notifications/test` - Test notification
+## Database Stats (Current)
+- **Total Tenders**: 3718
+  - Germany: 3639
+  - Switzerland: 40
+  - International: 39
+- **Users**: 10
+- **Developer Projects**: 19
 
 ## Test Credentials
 | Email | Password | Role | Can Share |
@@ -80,33 +67,34 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
 | phillip.kanthack@grovellows.de | Phillip123 | Project Manager | Yes |
 | vesna.udovcic@grovellows.de | Vesna123 | Admin | No |
 
-## Database Stats
-- Tenders: ~3677 (all 2026+)
-- Users: 10
-- Developer Projects: 19
+## Push Notification API Endpoints
+- `POST /api/push-tokens` - Register push token
+- `DELETE /api/push-tokens/{user_id}` - Unregister tokens
+- `GET /api/push-tokens/status` - Get notification status
+- `POST /api/notifications/send` - Send notifications (admin)
+- `POST /api/notifications/test` - Test notification
 
 ## Key Files
 - `/app/backend/server.py` - Main API with push notifications
-- `/app/backend/comprehensive_scraper.py` - Playwright TED scraper
-- `/app/backend/developer_scraper.py` - Developer projects
+- `/app/backend/comprehensive_scraper.py` - TED + simap.ch scraper
+- `/app/frontend/app/tender/[id].tsx` - Tender detail with Claim & Chat
 - `/app/frontend/services/notifications.ts` - Push notification service
 - `/app/frontend/contexts/NotificationContext.tsx` - Notification state
-- `/app/frontend/app/(tabs)/index.tsx` - Main tender list
 
 ## Remaining Tasks
 
 ### P1 - High Priority
-- [ ] UI for Tender "Claim" and "Chat" features
 - [ ] Notification settings UI in profile page
+- [ ] Test push notifications on physical device
 
-### P2 - Medium Priority  
+### P2 - Medium Priority
 - [ ] Real scraper for Market News section
-- [ ] ESLint configuration fix for TypeScript
+- [ ] ESLint configuration fix
 
 ### P3 - Low Priority
 - [ ] Frontend linting error in index.tsx
 
-## Known Limitations
-- Push notifications require physical device or Expo Go app (won't work on web preview)
-- Developer project scraping relies on seed data
-- simap.ch scraper may need periodic URL updates
+## Scraper Sources
+- **Germany**: Ausschreibungen Deutschland, Vergabe Bayern, TED Europa
+- **Switzerland**: simap.ch (working!)
+- **International**: TED Europa (multiple EU countries)
