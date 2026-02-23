@@ -1431,7 +1431,7 @@ async def get_users(
         can_share=user.get("can_share", False),
         linkedin_url=user.get("linkedin_url"),
         notification_preferences=user.get("notification_preferences", {}),
-        created_at=user["created_at"]
+        created_at=user.get("created_at", datetime.utcnow())  # Default to now if missing
     ) for user in users]
     
     # Cache the result
