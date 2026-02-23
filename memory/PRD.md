@@ -32,14 +32,22 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
    - Fixed `sendMessage` → `handleSendMessage` reference in tender detail chat section
    - Chat send button now works correctly
 
-3. **Verified All UI Features Working**
+3. **Country Filter Fix (NEW)**
+   - Fixed useEffect logic in index.tsx to properly trigger API calls when country filter changes
+   - German flag (🇩🇪) now correctly filters to German tenders only
+   - Swiss flag (🇨🇭) now correctly filters to Swiss tenders (40 found)
+   - Filter can be toggled off by clicking the same flag again
+   - Filter counts update dynamically based on selected country
+
+4. **Verified All UI Features Working**
    - Login flow with valid credentials
    - Tenders list (1000 tenders displayed)
    - Tender detail page with Claim & Chat sections
    - Profile page with Push Notification Settings
+   - Country filter tabs (Germany/Switzerland)
    - All navigation tabs functional
 
-4. **simap.ch Swiss Tender Scraping (Previously FIXED)**
+5. **simap.ch Swiss Tender Scraping (Previously FIXED)**
    - Updated scraper to use current simap.ch portal (not archive)
    - Successfully scraped 40 Swiss tenders from simap.ch
    - Proper 2026+ date filtering
