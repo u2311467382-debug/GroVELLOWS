@@ -1,6 +1,6 @@
 {
   "timestamp": "2026-02-18T11:10:51.198386",
-  "backend_url": "https://multi-user-preview.preview.emergentagent.com/api",
+  "backend_url": "https://tender-tracker-dev.preview.emergentagent.com/api",
   "total_tests": 10,
   "passed": 10,
   "failed": 0,

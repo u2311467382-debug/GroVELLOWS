@@ -19,7 +19,7 @@ const getBackendUrl = () => {
   }
   
   // Default fallback
-  return 'https://multi-user-preview.preview.emergentagent.com';
+  return 'https://tender-tracker-dev.preview.emergentagent.com';
 };
 
 const BACKEND_URL = getBackendUrl();

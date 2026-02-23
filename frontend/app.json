@@ -75,7 +75,7 @@
       "typedRoutes": true
     },
     "extra": {
-      "EXPO_PUBLIC_BACKEND_URL": "https://multi-user-preview.preview.emergentagent.com"
+      "EXPO_PUBLIC_BACKEND_URL": "https://tender-tracker-dev.preview.emergentagent.com"
     }
   }
 }

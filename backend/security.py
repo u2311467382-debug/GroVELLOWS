@@ -46,7 +46,7 @@ SECURITY_CONFIG = {
     "token_blacklist_ttl": 86400,           # 24 hours for blacklisted tokens
     "suspicious_activity_threshold": 10,    # Requests that trigger monitoring
     "allowed_origins": [
-        "https://multi-user-preview.preview.emergentagent.com",
+        "https://tender-tracker-dev.preview.emergentagent.com",
         "http://localhost:3000",
         "http://localhost:8001",
         "exp://",

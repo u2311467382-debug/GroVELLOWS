@@ -8,7 +8,7 @@ import time
 import json
 from datetime import datetime
 
-BASE_URL = "https://multi-user-preview.preview.emergentagent.com/api"
+BASE_URL = "https://tender-tracker-dev.preview.emergentagent.com/api"
 DIRECTOR_CREDENTIALS = {"email": "director@grovellows.de", "password": "Director123"}
 
 def test_authentication_and_mfa():

@@ -9,7 +9,7 @@ Tests specific endpoints as requested in the review request:
 4. Favorites API Tests (GET /api/favorites)
 5. Market News API Tests (GET /api/news)
 
-Backend URL: https://multi-user-preview.preview.emergentagent.com/api
+Backend URL: https://tender-tracker-dev.preview.emergentagent.com/api
 """
 
 import requests
@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 
 # Backend URL from user review request
-BACKEND_URL = "https://multi-user-preview.preview.emergentagent.com/api"
+BACKEND_URL = "https://tender-tracker-dev.preview.emergentagent.com/api"
 
 # Test credentials from user review request
 DIRECTOR_EMAIL = "director@grovellows.de"
