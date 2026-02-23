@@ -11,11 +11,13 @@ import {
   Modal,
   Image,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ShieldCheckIcon, KeyIcon, UserIcon, GlobeAltIcon, BellIcon, ArrowRightOnRectangleIcon, DevicePhoneMobileIcon, QrCodeIcon } from 'react-native-heroicons/outline';
 import { colors } from '../../utils/colors';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import api from '../../utils/api';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../../utils/i18n';
