@@ -18,6 +18,7 @@ import { ShieldCheckIcon, KeyIcon, UserIcon, GlobeAltIcon, BellIcon, ArrowRightO
 import { colors } from '../../utils/colors';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
+import PushNotificationSettings from '../../components/PushNotificationSettings';
 import api from '../../utils/api';
 import { useTranslation } from 'react-i18next';
 import { changeLanguage } from '../../utils/i18n';
