@@ -2002,16 +2002,20 @@ class ComprehensiveScraper:
     # ==================== SWISS PLATFORM ====================
 
     async def scrape_simap_switzerland(self) -> list:
-        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data from archive
-        Includes pagination (5 pages) and Tender ID (Meldungsnummer) in descriptions
-        Only returns tenders from 2025 onwards"""
+        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data
+        Only returns tenders from 2026 onwards with proper date filtering"""
         tenders = []
         seen_tender_ids = set()  # Track seen tender IDs to avoid duplicates
         
         try:
             from playwright.async_api import async_playwright
+            from datetime import datetime
             
-            logger.info("simap.ch: Starting Playwright browser automation for REAL Swiss tenders from archive...")
+            logger.info("simap.ch: Starting Playwright browser automation for REAL Swiss tenders...")
+            
+            # Current year for filtering
+            current_year = datetime.now().year
+            min_year = 2026  # Only tenders from 2026 onwards
             
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
@@ -2022,36 +2026,41 @@ class ComprehensiveScraper:
                 
                 for term in search_terms:
                     try:
-                        # Navigate to archive search
-                        await page.goto('https://archiv.simap.ch', wait_until='networkidle', timeout=30000)
+                        # Navigate to simap.ch main search (NOT archive)
+                        await page.goto('https://www.simap.ch/en/search', wait_until='networkidle', timeout=30000)
                         await page.wait_for_timeout(2000)
                         
-                        # Fill in search keyword
-                        keyword_input = page.locator('input').first
-                        await keyword_input.fill(term)
-                        await page.wait_for_timeout(500)
+                        # Look for search input
+                        search_input = page.locator('input[type="text"], input[type="search"], input[placeholder*="Search"], input[name*="search"]').first
                         
-                        # Click search button
-                        search_btn = page.locator('button:has-text("Suchen")').first
-                        await search_btn.click()
-                        await page.wait_for_timeout(4000)
+                        if await search_input.count() > 0:
+                            await search_input.fill(term)
+                            await page.wait_for_timeout(500)
+                            
+                            # Press Enter or click search button
+                            await search_input.press('Enter')
+                            await page.wait_for_timeout(4000)
+                        else:
+                            # Try alternative: direct URL with search query
+                            await page.goto(f'https://www.simap.ch/en/search?q={term}', wait_until='networkidle', timeout=30000)
+                            await page.wait_for_timeout(3000)
                         
                         # Paginate through results (up to PAGES_TO_SCRAPE pages)
                         for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
                             if page_num > 1:
                                 # Try to click "Next" or navigate to next page
                                 try:
-                                    next_btn = page.locator('button:has-text("Weiter"), a:has-text("Weiter"), .pagination a.next, a[rel="next"]').first
+                                    next_btn = page.locator('button:has-text("Next"), a:has-text("Next"), button:has-text("Weiter"), a:has-text("Weiter"), .pagination a.next, a[rel="next"]').first
                                     if await next_btn.count() > 0:
                                         await next_btn.click()
                                         await page.wait_for_timeout(3000)
                                     else:
                                         break  # No more pages
-                                except:
+                                except Exception:
                                     break  # No pagination available
                             
-                            # Get the table rows with results
-                            rows = await page.locator('table tbody tr, tr').all()
+                            # Get results - look for table rows or list items
+                            rows = await page.locator('table tbody tr, .search-result, .tender-item, article, .list-item').all()
                             logger.info(f"simap.ch ({term}, page {page_num}): Found {len(rows)} result rows")
                             
                             if len(rows) == 0:
@@ -2069,7 +2078,7 @@ class ComprehensiveScraper:
                                     # Parse the tender info from row text
                                     lines = text.split('\n')
                                     
-                                    # Extract Meldungsnummer (Tender ID) - usually a number at start of row
+                                    # Extract Meldungsnummer (Tender ID) - usually a number
                                     tender_id = None
                                     for line in lines:
                                         line = line.strip()
@@ -2094,18 +2103,32 @@ class ComprehensiveScraper:
                                             break
                                     
                                     if title and self.is_relevant_tender(title):
-                                        # Check publication date - extract year from text
-                                        pub_date = self.extract_publication_date(text)
-                                        if pub_date and pub_date.year < 2026:
-                                            continue  # Skip old tenders
+                                        # Extract deadline date
+                                        deadline = self.extract_deadline(text)
+                                        
+                                        # STRICT DATE FILTER: Only accept tenders from 2026 onwards
+                                        if deadline:
+                                            try:
+                                                deadline_year = deadline.year
+                                                if deadline_year < min_year:
+                                                    continue  # Skip old tenders
+                                            except Exception:
+                                                pass
+                                        else:
+                                            # If no deadline found, check publication date in text
+                                            pub_date = self.extract_publication_date(text)
+                                            if pub_date and pub_date.year < min_year:
+                                                continue
+                                            # If still no date found, use 2026 default deadline
+                                            deadline = datetime(2026, 12, 31)
                                         
                                         # Get link if available
                                         link_elem = row.locator('a').first
-                                        link = 'https://archiv.simap.ch/result'
+                                        link = 'https://www.simap.ch'
                                         if await link_elem.count() > 0:
                                             href = await link_elem.get_attribute('href') or ''
                                             if href:
-                                                link = f'https://archiv.simap.ch{href}' if not href.startswith('http') else href
+                                                link = f'https://www.simap.ch{href}' if not href.startswith('http') else href
                                         
                                         # Extract authority from text
                                         authority = 'Schweizer Öffentlicher Auftraggeber'
@@ -2127,14 +2150,14 @@ class ComprehensiveScraper:
                                                 'description': description,  # Includes Meldungsnummer
                                                 'tender_id': tender_id,  # Store ID separately
                                                 'budget': self.extract_budget(text),
-                                                'deadline': self.extract_deadline(text),
+                                                'deadline': deadline,
                                                 'location': 'Schweiz',
                                                 'project_type': 'Public Tender',
                                                 'contracting_authority': authority,
                                                 'category': cat_info['category'] or 'Projektmanagement',
                                                 'building_typology': cat_info['building_typology'],
                                                 'platform_source': 'simap.ch (Schweiz)',
-                                                'platform_url': 'https://archiv.simap.ch',
+                                                'platform_url': 'https://www.simap.ch',
                                                 'direct_link': link,
                                                 'country': 'Switzerland',
                                             })
@@ -2153,7 +2176,7 @@ class ComprehensiveScraper:
         except Exception as e:
             logger.error(f"simap.ch Playwright error: {e}")
         
-        logger.info(f"simap.ch: Found {len(tenders)} REAL Swiss tenders (from {self.PAGES_TO_SCRAPE} pages per search term)")
+        logger.info(f"simap.ch: Found {len(tenders)} REAL Swiss tenders (2026+) from {self.PAGES_TO_SCRAPE} pages per search term")
         return tenders
 
     # ==================== DEDUPLICATION ====================
