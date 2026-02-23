@@ -1397,7 +1397,7 @@ async def get_shares(
                 sharer = await db.users.find_one({"_id": ObjectId(share["shared_by"])})
                 if sharer:
                     share["shared_by_name"] = sharer.get("name", "Team member")
-            except:
+            except Exception:
                 share["shared_by_name"] = "Team member"
     
     return shares
