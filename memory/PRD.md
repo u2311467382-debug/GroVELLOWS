@@ -108,13 +108,13 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
 
 ### P1 - High Priority
 - [x] Notification settings UI in profile page (COMPLETED)
-- [ ] Test push notifications on physical device (requires Expo Go)
-- [ ] Fix "Unexpected text node" React Native Web warnings (cosmetic - doesn't affect functionality)
+- [x] Market News real scraper (VERIFIED WORKING - 292+ articles from 5 sources)
+- [x] Expo Go tunnel mode (ENABLED)
+- [ ] Test push notifications on physical device via Expo Go
 
 ### P2 - Medium Priority
-- [ ] Real scraper for Market News section
+- [x] Load testing for backend optimizations (COMPLETED - all tests passed)
 - [ ] ESLint configuration fix for TypeScript interfaces
-- [ ] Load testing for backend optimizations
 
 ### P3 - Low Priority
 - [ ] Frontend linting error in index.tsx (ESLint parser issue)
