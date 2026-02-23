@@ -1405,20 +1405,38 @@ async def get_shares(
 # ============ USERS ENDPOINTS ============
 
 @api_router.get("/users", response_model=List[User])
+@limiter.limit("30/minute")  # Rate limit for users list
 async def get_users(
+    request: Request,
     current_user: dict = Depends(get_current_user)
 ):
-    users = await db.users.find().to_list(1000)
+    """Get all users with caching for better performance"""
+    # Try to get from cache first
+    cached_users = users_cache.get("all_users")
+    if cached_users:
+        return cached_users
     
-    return [User(
+    # Query database with projection for only needed fields
+    users = await db.users.find({}, {
+        "_id": 1, "email": 1, "name": 1, "role": 1,
+        "linkedin_url": 1, "notification_preferences": 1,
+        "created_at": 1, "can_share": 1
+    }).to_list(1000)
+    
+    result = [User(
         id=str(user["_id"]),
         email=user["email"],
         name=user["name"],
         role=user["role"],
+        can_share=user.get("can_share", False),
         linkedin_url=user.get("linkedin_url"),
         notification_preferences=user.get("notification_preferences", {}),
         created_at=user["created_at"]
     ) for user in users]
+    
+    # Cache the result
+    users_cache.set("all_users", result)
+    return result
 
 # ============ NEWS ENDPOINTS ============
 
