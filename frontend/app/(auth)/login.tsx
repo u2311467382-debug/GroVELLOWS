@@ -151,6 +151,7 @@ export default function Login() {
             style={[styles.button, loading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={loading}
+            data-testid="login-button"
           >
             {loading ? (
               <ActivityIndicator color={colors.card} />
