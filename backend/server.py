@@ -582,6 +582,7 @@ async def login(credentials: UserLogin, request: Request):
         email=user["email"],
         name=user["name"],
         role=user["role"],
+        can_share=user.get("can_share", False),  # Individual sharing permission
         linkedin_url=user.get("linkedin_url"),
         notification_preferences=user.get("notification_preferences", {}),
         created_at=user["created_at"]
