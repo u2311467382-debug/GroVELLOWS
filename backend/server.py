@@ -2607,6 +2607,67 @@ async def get_scrape_status(current_user: dict = Depends(get_current_user)):
         }
     }
 
+# ============ HEALTH CHECK & STATS ENDPOINTS ============
+
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring and load balancers"""
+    try:
+        # Quick DB ping to verify connection
+        await db.command("ping")
+        
+        return {
+            "status": "healthy",
+            "timestamp": datetime.utcnow().isoformat(),
+            "database": "connected",
+            "version": "2.0.0"
+        }
+    except Exception as e:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "unhealthy",
+                "timestamp": datetime.utcnow().isoformat(),
+                "error": str(e)
+            }
+        )
+
+@api_router.get("/stats")
+@limiter.limit("20/minute")
+async def get_system_stats(
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get system statistics with caching for performance"""
+    # Check cache first
+    cached_stats = stats_cache.get("system_stats")
+    if cached_stats:
+        return cached_stats
+    
+    # Calculate stats
+    stats = {
+        "tenders": {
+            "total": await db.tenders.count_documents({}),
+            "new": await db.tenders.count_documents({"status": "New"}),
+            "by_country": {
+                "germany": await db.tenders.count_documents({"country": "Germany"}),
+                "switzerland": await db.tenders.count_documents({"country": "Switzerland"}),
+                "international": await db.tenders.count_documents({"country": "International"})
+            }
+        },
+        "users": {
+            "total": await db.users.count_documents({})
+        },
+        "developer_projects": {
+            "total": await db.developer_projects.count_documents({})
+        },
+        "timestamp": datetime.utcnow().isoformat()
+    }
+    
+    # Cache the result
+    stats_cache.set("system_stats", stats)
+    return stats
+
 # ============ EMPLOYEE CONNECTIONS ENDPOINTS ============
 
 @api_router.get("/employees")
