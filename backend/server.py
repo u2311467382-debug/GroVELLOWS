@@ -3735,11 +3735,21 @@ async def startup_event():
         replace_existing=True
     )
     
+    # Schedule news cleanup weekly (every Sunday at 3am UTC)
+    scheduler.add_job(
+        cleanup_old_news,
+        CronTrigger(day_of_week='sun', hour=3, minute=0, timezone='UTC'),
+        id="cleanup_news",
+        name="Cleanup old news articles weekly (older than 3 weeks)",
+        replace_existing=True
+    )
+    
     scheduler.start()
     logger.info("✅ Background scheduler started:")
     logger.info("   - Tenders scraping: every 1 minute")
     logger.info("   - News scraping: every 5 minutes")
-    logger.info("   - Cleanup: daily at 7pm German time (19:00 CET)")
+    logger.info("   - Tender cleanup: daily at 7pm German time (19:00 CET)")
+    logger.info("   - News cleanup: weekly on Sunday at 3am UTC (removes articles older than 3 weeks)")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
