@@ -188,9 +188,16 @@ export default function TendersScreen() {
 
   // Re-fetch when country filter changes
   useEffect(() => {
-    if (selectedCountry) {
+    // Skip initial render when selectedCountry is 'All'
+    if (selectedCountry && selectedCountry !== 'All') {
+      console.log('Country changed to:', selectedCountry, '- fetching tenders');
       setLoading(true);
       fetchTenders(selectedCountry);
+    } else if (selectedCountry === 'All') {
+      // When clicking flag again to deselect, refetch all
+      console.log('Country reset to All - fetching all tenders');
+      setLoading(true);
+      fetchTenders();
     }
   }, [selectedCountry]);
 
@@ -206,7 +213,9 @@ export default function TendersScreen() {
       }
       const queryString = params.toString();
       const url = queryString ? `/tenders?${queryString}` : '/tenders';
+      console.log('Fetching tenders from:', url);
       const response = await api.get(url);
+      console.log('Received', response.data.length, 'tenders');
       setTenders(response.data);
     } catch (error) {
       console.error('Failed to fetch tenders:', error);
