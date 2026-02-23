@@ -3387,23 +3387,38 @@ async def send_push_notification(push_token: str, title: str, body: str, data: d
 
 async def notify_users_new_tender(tender: dict):
     """Send push notifications to all users about a new tender"""
-    # Get all users with push tokens who have new_tenders notifications enabled
-    users = await db.users.find({
-        "push_token": {"$exists": True, "$ne": None},
-        "notification_preferences.new_tenders": True
-    }).to_list(None)
-    
-    for user in users:
-        await send_push_notification(
-            push_token=user["push_token"],
-            title=f"🆕 New Tender: {tender.get('category', 'General')}",
-            body=tender.get('title', 'New tender available')[:100],
-            data={
-                "tenderId": str(tender.get("_id", "")),
-                "category": tender.get("category", ""),
-                "platform": tender.get("platform_source", ""),
-            }
+    try:
+        # Get all user IDs who have new_tenders notifications enabled
+        users = await db.users.find({
+            "notification_preferences.new_tenders": True
+        }).to_list(None)
+        
+        if not users:
+            return
+        
+        user_ids = [str(user["_id"]) for user in users]
+        
+        # Prepare notification content
+        title = f"New Tender: {tender.get('category', 'General')}"
+        body = tender.get('title', 'New tender available')[:100]
+        data = {
+            "type": "new_tender",
+            "tenderId": str(tender.get("_id", "")),
+            "category": tender.get("category", ""),
+            "platform": tender.get("platform_source", ""),
+            "screen": "Tenders"
+        }
+        
+        # Send push notifications using our new system
+        await send_push_notifications(
+            user_ids=user_ids,
+            title=title,
+            body=body,
+            data=data
         )
+        
+    except Exception as e:
+        logger.error(f"Error sending tender notification: {e}")
 
 # ============ SCRAPE SETTINGS ============
 
