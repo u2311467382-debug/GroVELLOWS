@@ -618,6 +618,113 @@ class PropertyMagazineScraper(NewsScraperBase):
         }
 
 
+class EntwicklungsstadtScraper(NewsScraperBase):
+    """Scraper for Entwicklungsstadt.de - German construction and urban development news"""
+    
+    BASE_URL = "https://www.entwicklungsstadt.de"
+    
+    async def scrape(self, max_results: int = 20) -> List[Dict]:
+        """Scrape news from Entwicklungsstadt.de"""
+        news = []
+        
+        # Scrape main page and city-specific sections
+        urls = [
+            f"{self.BASE_URL}/aktuelles/",
+            f"{self.BASE_URL}/berlin/",
+            f"{self.BASE_URL}/hamburg/",
+            f"{self.BASE_URL}/frankfurt/",
+        ]
+        
+        try:
+            for url in urls:
+                async with self.session.get(
+                    url,
+                    timeout=aiohttp.ClientTimeout(total=30)
+                ) as response:
+                    if response.status == 200:
+                        html = await response.text()
+                        soup = BeautifulSoup(html, 'lxml')
+                        
+                        # Articles are in various containers
+                        articles = soup.select('article, .fusion-post-content, .post-content')
+                        
+                        for article in articles[:max_results // len(urls)]:
+                            item = self._parse_article(article)
+                            if item:
+                                news.append(item)
+                                
+        except Exception as e:
+            logger.error(f"Entwicklungsstadt scraping error: {e}")
+        
+        return news
+    
+    def _parse_article(self, article) -> Optional[Dict]:
+        """Parse article from Entwicklungsstadt"""
+        # Find title - usually in h2, h3, or link
+        title_elem = article.select_one('h2 a, h3 a, h4 a, .entry-title a, a.fusion-rollover-title')
+        if not title_elem:
+            title_elem = article.select_one('h2, h3, h4, .entry-title')
+        
+        if not title_elem:
+            return None
+        
+        title = self.clean_text(title_elem.get_text())
+        if not title or len(title) < 15:
+            return None
+        
+        # Extract summary from excerpt or first paragraph
+        summary = ""
+        summary_elem = article.select_one('.excerpt, .entry-summary, p')
+        if summary_elem:
+            summary = self.clean_text(summary_elem.get_text())[:500]
+        
+        # Get article link
+        link = ""
+        link_elem = article.select_one('a[href*="entwicklungsstadt.de"]')
+        if not link_elem:
+            link_elem = title_elem if title_elem.name == 'a' else title_elem.find_parent('a')
+        
+        if link_elem and link_elem.get('href'):
+            href = link_elem.get('href', '')
+            if href.startswith('/'):
+                link = f"{self.BASE_URL}{href}"
+            elif 'entwicklungsstadt.de' in href:
+                link = href
+        
+        # Extract category from article classes or parent
+        category = "General"
+        category_elem = article.select_one('.fusion-post-cats, .post-categories a, .cat-links a')
+        if category_elem:
+            cat_text = self.clean_text(category_elem.get_text()).lower()
+            if any(k in cat_text for k in ['wohn', 'residential']):
+                category = "Wohnungsbau"
+            elif any(k in cat_text for k in ['gewerbe', 'commercial', 'büro']):
+                category = "Gewerbebau"
+            elif any(k in cat_text for k in ['infrastruktur', 'verkehr', 'bahn']):
+                category = "Infrastruktur"
+            elif any(k in cat_text for k in ['kultur', 'sport']):
+                category = "Kultur & Sport"
+            elif any(k in cat_text for k in ['städtebau', 'urban']):
+                category = "Städtebau"
+        
+        # Calculate relevance - construction news from this source is highly relevant
+        relevance = self.calculate_relevance(title, summary)
+        # Boost relevance for this source as it's very construction-focused
+        relevance = min(100, relevance + 15)
+        
+        return {
+            "title": title,
+            "summary": summary or f"Bauprojekte und Stadtentwicklung: {title}",
+            "source": "Entwicklungsstadt",
+            "url": link or self.BASE_URL,
+            "published_at": datetime.utcnow(),
+            "category": category,
+            "relevance_score": relevance,
+            "scraped_at": datetime.utcnow(),
+            "source_id": self.generate_news_id(title, "entwicklungsstadt"),
+        }
+
+
 async def scrape_all_news(max_per_source: int = 15) -> List[Dict]:
     """Scrape news from all available sources"""
     all_news = []
@@ -629,6 +736,7 @@ async def scrape_all_news(max_per_source: int = 15) -> List[Dict]:
         ("Handelsblatt", HandelsblattScraper),
         ("Baublatt", BaublattScraper),
         ("Property Magazine", PropertyMagazineScraper),
+        ("Entwicklungsstadt", EntwicklungsstadtScraper),
     ]
     
     for name, ScraperClass in scrapers:
