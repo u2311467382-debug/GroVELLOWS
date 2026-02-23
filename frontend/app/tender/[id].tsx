@@ -682,7 +682,7 @@ export default function TenderDetailScreen() {
                     styles.chatSendButton,
                     !newMessage.trim() && styles.chatSendButtonDisabled,
                   ]}
-                  onPress={sendMessage}
+                  onPress={handleSendMessage}
                   disabled={!newMessage.trim() || sendingMessage}
                 >
                   {sendingMessage ? (
