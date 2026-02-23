@@ -212,7 +212,7 @@ export default function TenderDetailScreen() {
   };
 
   const handleShareViaWhatsApp = () => {
-    const tenderUrl = tender?.direct_link || tender?.platform_url || `https://grovellows-dev.preview.emergentagent.com/tender/${id}`;
+    const tenderUrl = tender?.direct_link || tender?.platform_url || `https://multi-user-preview.preview.emergentagent.com/tender/${id}`;
     const message = `*GroVELLOWS Tender*\n\n📋 ${tender?.title}\n\n💰 Budget: ${tender?.budget}\n📍 Location: ${tender?.location}\n📅 Deadline: ${tender?.deadline ? format(new Date(tender.deadline), 'dd MMM yyyy') : 'N/A'}\n\n🔗 View Tender: ${tenderUrl}`;
     const whatsappUrl = `whatsapp://send?text=${encodeURIComponent(message)}`;
     

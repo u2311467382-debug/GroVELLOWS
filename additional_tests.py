@@ -8,7 +8,7 @@ import json
 import time
 from datetime import datetime
 
-BASE_URL = "https://grovellows-dev.preview.emergentagent.com/api"
+BASE_URL = "https://multi-user-preview.preview.emergentagent.com/api"
 
 DIRECTOR_CREDENTIALS = {
     "email": "director@grovellows.de",

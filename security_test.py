@@ -12,7 +12,7 @@ from typing import Dict, Optional, Tuple
 from datetime import datetime
 
 # Configuration
-BASE_URL = "https://grovellows-dev.preview.emergentagent.com/api"
+BASE_URL = "https://multi-user-preview.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "director": {"email": "director@grovellows.de", "password": "Director123"},
     "partner": {"email": "partner@grovellows.de", "password": "Partner123"}

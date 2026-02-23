@@ -31,7 +31,7 @@ from typing import Dict, Any, Optional
 
 # Configuration
 import os
-BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://grovellows-dev.preview.emergentagent.com')
+BACKEND_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multi-user-preview.preview.emergentagent.com')
 BASE_URL = f"{BACKEND_URL}/api"
 
 # Test credentials from review request
