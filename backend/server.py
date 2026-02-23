@@ -203,6 +203,7 @@ class User(BaseModel):
     email: EmailStr
     name: str
     role: str
+    can_share: bool = False  # Individual sharing permission
     linkedin_url: Optional[str] = None
     department: Optional[str] = None
     profile: Optional[EmployeeProfile] = None
