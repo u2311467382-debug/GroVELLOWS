@@ -47,7 +47,13 @@ Build a mobile app "GroVELLOWS" for tracking tender updates from German and Swis
    - Country filter tabs (Germany/Switzerland)
    - All navigation tabs functional
 
-5. **simap.ch Swiss Tender Scraping (Previously FIXED)**
+5. **Entwicklungsstadt.de News Scraper (NEW)**
+   - Added new scraper for https://www.entwicklungsstadt.de/
+   - Scrapes Berlin, Hamburg, Frankfurt, Potsdam construction news
+   - 15+ articles per scrape with proper categorization (Wohnungsbau, Gewerbebau, Infrastruktur, etc.)
+   - High relevance boost (+20) for construction-focused content
+
+6. **simap.ch Swiss Tender Scraping (Previously FIXED)**
    - Updated scraper to use current simap.ch portal (not archive)
    - Successfully scraped 40 Swiss tenders from simap.ch
    - Proper 2026+ date filtering
