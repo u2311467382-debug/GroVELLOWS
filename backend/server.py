@@ -114,7 +114,7 @@ def validate_password(password: str) -> bool:
 ROLE_PERMISSIONS = {
     "Director": ["read", "write", "delete", "admin", "share", "scrape"],
     "Partner": ["read", "write", "delete", "admin", "share"],
-    "Admin": ["read", "write", "delete", "admin"],  # Admin role - no share permission
+    "Admin": ["read", "write", "delete", "admin"],
     "Senior Project Manager": ["read", "write"],
     "Project Manager": ["read", "write"],
     "HR": ["read"],
@@ -122,10 +122,19 @@ ROLE_PERMISSIONS = {
 }
 
 def check_permission(user: dict, permission: str) -> bool:
-    """Check if user has specific permission"""
+    """Check if user has specific permission based on role OR individual permission"""
     role = user.get("role", "Intern")
     allowed = ROLE_PERMISSIONS.get(role, [])
-    return permission in allowed
+    
+    # Check role-based permission first
+    if permission in allowed:
+        return True
+    
+    # For 'share' permission, also check individual can_share flag
+    if permission == "share" and user.get("can_share", False):
+        return True
+    
+    return False
 
 # ============ MODELS ============
 
