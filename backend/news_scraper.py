@@ -626,6 +626,7 @@ class EntwicklungsstadtScraper(NewsScraperBase):
     async def scrape(self, max_results: int = 20) -> List[Dict]:
         """Scrape news from Entwicklungsstadt.de"""
         news = []
+        seen_urls = set()
         
         # Scrape main page and city-specific sections
         urls = [
@@ -633,6 +634,7 @@ class EntwicklungsstadtScraper(NewsScraperBase):
             f"{self.BASE_URL}/berlin/",
             f"{self.BASE_URL}/hamburg/",
             f"{self.BASE_URL}/frankfurt/",
+            f"{self.BASE_URL}/potsdam/",
         ]
         
         try:
@@ -645,78 +647,89 @@ class EntwicklungsstadtScraper(NewsScraperBase):
                         html = await response.text()
                         soup = BeautifulSoup(html, 'lxml')
                         
-                        # Articles are in various containers
-                        articles = soup.select('article, .fusion-post-content, .post-content')
+                        # Find all article links
+                        all_links = soup.find_all('a', href=True)
+                        article_links = [
+                            a for a in all_links 
+                            if 'entwicklungsstadt.de/' in a.get('href', '') 
+                            and not any(x in a.get('href', '').lower() for x in [
+                                '/author/', '/tag/', '/category/', '/bezirke/', '/baustelle-',
+                                'impressum', 'datenschutz', 'kontakt', 'newsletter', 'abo', 
+                                'backend', '#', 'instagram', 'facebook', 'twitter', 'linkedin',
+                                '/video/', 'plus-abo'
+                            ])
+                            and a.get_text().strip()
+                            and len(a.get_text().strip()) > 25
+                        ]
                         
-                        for article in articles[:max_results // len(urls)]:
-                            item = self._parse_article(article)
+                        for link in article_links:
+                            href = link.get('href')
+                            if href in seen_urls:
+                                continue
+                            seen_urls.add(href)
+                            
+                            item = self._parse_link(link, href)
                             if item:
                                 news.append(item)
+                            
+                            if len(news) >= max_results:
+                                break
+                                
+                if len(news) >= max_results:
+                    break
                                 
         except Exception as e:
             logger.error(f"Entwicklungsstadt scraping error: {e}")
         
-        return news
+        return news[:max_results]
     
-    def _parse_article(self, article) -> Optional[Dict]:
-        """Parse article from Entwicklungsstadt"""
-        # Find title - usually in h2, h3, or link
-        title_elem = article.select_one('h2 a, h3 a, h4 a, .entry-title a, a.fusion-rollover-title')
-        if not title_elem:
-            title_elem = article.select_one('h2, h3, h4, .entry-title')
-        
-        if not title_elem:
+    def _parse_link(self, link_elem, url: str) -> Optional[Dict]:
+        """Parse article from link element"""
+        title = self.clean_text(link_elem.get_text())
+        if not title or len(title) < 20:
             return None
         
-        title = self.clean_text(title_elem.get_text())
-        if not title or len(title) < 15:
+        # Skip navigation and non-article links
+        skip_titles = ['entwicklungsstadt', 'newsletter', 'alle artikel', 'mehr lesen', 
+                       'read more', 'weiterlesen', 'übersicht', 'kontakt']
+        if any(skip in title.lower() for skip in skip_titles):
             return None
         
-        # Extract summary from excerpt or first paragraph
-        summary = ""
-        summary_elem = article.select_one('.excerpt, .entry-summary, p')
-        if summary_elem:
-            summary = self.clean_text(summary_elem.get_text())[:500]
-        
-        # Get article link
-        link = ""
-        link_elem = article.select_one('a[href*="entwicklungsstadt.de"]')
-        if not link_elem:
-            link_elem = title_elem if title_elem.name == 'a' else title_elem.find_parent('a')
-        
-        if link_elem and link_elem.get('href'):
-            href = link_elem.get('href', '')
-            if href.startswith('/'):
-                link = f"{self.BASE_URL}{href}"
-            elif 'entwicklungsstadt.de' in href:
-                link = href
-        
-        # Extract category from article classes or parent
+        # Extract category from URL or parent element
         category = "General"
-        category_elem = article.select_one('.fusion-post-cats, .post-categories a, .cat-links a')
-        if category_elem:
-            cat_text = self.clean_text(category_elem.get_text()).lower()
-            if any(k in cat_text for k in ['wohn', 'residential']):
-                category = "Wohnungsbau"
-            elif any(k in cat_text for k in ['gewerbe', 'commercial', 'büro']):
-                category = "Gewerbebau"
-            elif any(k in cat_text for k in ['infrastruktur', 'verkehr', 'bahn']):
-                category = "Infrastruktur"
-            elif any(k in cat_text for k in ['kultur', 'sport']):
-                category = "Kultur & Sport"
-            elif any(k in cat_text for k in ['städtebau', 'urban']):
-                category = "Städtebau"
+        url_lower = url.lower()
+        if '/berlin/' in url_lower:
+            category = "Berlin"
+        elif '/hamburg/' in url_lower:
+            category = "Hamburg" 
+        elif '/frankfurt/' in url_lower:
+            category = "Frankfurt"
+        elif '/potsdam/' in url_lower:
+            category = "Potsdam"
+        
+        # Determine typology from title
+        title_lower = title.lower()
+        if any(k in title_lower for k in ['wohn', 'apartment', 'miete', 'residential']):
+            category = "Wohnungsbau"
+        elif any(k in title_lower for k in ['gewerbe', 'büro', 'office', 'commercial']):
+            category = "Gewerbebau"
+        elif any(k in title_lower for k in ['infrastruktur', 'verkehr', 'bahn', 'u-bahn', 'sbahn', 'straße']):
+            category = "Infrastruktur"
+        elif any(k in title_lower for k in ['schule', 'kita', 'bildung', 'campus', 'uni']):
+            category = "Bildung"
+        elif any(k in title_lower for k in ['krankenhaus', 'klinik', 'gesundheit', 'pflege']):
+            category = "Gesundheitswesen"
         
         # Calculate relevance - construction news from this source is highly relevant
-        relevance = self.calculate_relevance(title, summary)
+        relevance = self.calculate_relevance(title, "")
         # Boost relevance for this source as it's very construction-focused
-        relevance = min(100, relevance + 15)
+        relevance = min(100, relevance + 20)
         
         return {
             "title": title,
-            "summary": summary or f"Bauprojekte und Stadtentwicklung: {title}",
+            "summary": f"Stadtentwicklung und Bauprojekte: {title}",
             "source": "Entwicklungsstadt",
-            "url": link or self.BASE_URL,
+            "url": url,
             "published_at": datetime.utcnow(),
             "category": category,
             "relevance_score": relevance,
