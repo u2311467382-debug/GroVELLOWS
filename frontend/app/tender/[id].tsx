@@ -1146,4 +1146,137 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: colors.textLight,
   },
+  // Claim Button Styles
+  claimButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.background,
+    paddingVertical: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    gap: 8,
+  },
+  claimButtonActive: {
+    backgroundColor: colors.success,
+    borderColor: colors.success,
+  },
+  claimButtonDisabled: {
+    borderColor: colors.textLight,
+    opacity: 0.7,
+  },
+  claimButtonText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  claimButtonTextActive: {
+    color: colors.textWhite,
+  },
+  // Chat Styles
+  chatHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  chatHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  chatBadge: {
+    backgroundColor: colors.secondary,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+  chatBadgeText: {
+    color: colors.textWhite,
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  chatContainer: {
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 12,
+  },
+  emptyChatContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyChatText: {
+    fontSize: 16,
+    color: colors.textLight,
+    marginTop: 12,
+  },
+  emptyChatSubtext: {
+    fontSize: 14,
+    color: colors.textLight,
+    marginTop: 4,
+  },
+  chatMessages: {
+    maxHeight: 300,
+    marginBottom: 12,
+  },
+  chatMessage: {
+    backgroundColor: colors.background,
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    marginRight: 40,
+  },
+  chatMessageOwn: {
+    backgroundColor: colors.primaryLight,
+    marginRight: 0,
+    marginLeft: 40,
+  },
+  chatMessageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  chatMessageUser: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: colors.primary,
+  },
+  chatMessageTime: {
+    fontSize: 11,
+    color: colors.textLight,
+  },
+  chatMessageText: {
+    fontSize: 14,
+    color: colors.text,
+    lineHeight: 20,
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 10,
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: colors.background,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: colors.text,
+    maxHeight: 100,
+  },
+  chatSendButton: {
+    backgroundColor: colors.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  chatSendButtonDisabled: {
+    backgroundColor: colors.textLight,
+  },
 });
