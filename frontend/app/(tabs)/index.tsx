@@ -186,6 +186,14 @@ export default function TendersScreen() {
     fetchTenders();
   }, []);
 
+  // Re-fetch when country filter changes
+  useEffect(() => {
+    if (selectedCountry) {
+      setLoading(true);
+      fetchTenders(selectedCountry);
+    }
+  }, [selectedCountry]);
+
   useEffect(() => {
     filterAndSortTenders();
   }, [tenders, searchQuery, selectedCategories, selectedStatus, selectedTypologies, sortBy]);
