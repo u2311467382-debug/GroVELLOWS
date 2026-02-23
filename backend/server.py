@@ -928,7 +928,7 @@ async def get_tenders(
     application_status: Optional[str] = None,
     country: Optional[str] = None,
     platform_source: Optional[str] = None,
-    limit: int = Query(default=500, le=1000, description="Max tenders to return"),
+    limit: int = Query(default=1000, le=5000, description="Max tenders to return"),
     skip: int = Query(default=0, ge=0, description="Skip N tenders for pagination"),
     current_user: dict = Depends(get_current_user)
 ):
