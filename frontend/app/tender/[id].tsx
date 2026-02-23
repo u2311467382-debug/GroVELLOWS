@@ -85,7 +85,7 @@ export default function TenderDetailScreen() {
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const chatScrollRef = useRef<ScrollView>(null);
 
-  const canShare = user?.role === 'Director' || user?.role === 'Partner';
+  const canShare = user?.role === 'Director' || user?.role === 'Partner' || user?.can_share === true;
 
   useEffect(() => {
     fetchTenderDetail();
