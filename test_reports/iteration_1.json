@@ -1,0 +1,38 @@
+{
+  "summary": "Frontend testing completed for GroVELLOWS tender tracking app. Login, tenders list, tender detail, and profile pages all render correctly. Fixed a bug where sendMessage was referenced instead of handleSendMessage in tender detail page chat section.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "/api/auth/login", "issue": "Rate limiting (429) triggered after multiple rapid login attempts - expected behavior but affects testing"}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "console_warnings": [
+      {"component": "Multiple pages", "issue": "Console warning: 'Unexpected text node: . A text node cannot be a child of a <View>.' - appears on tenders list and profile pages but doesn't break UI visually", "priority": "LOW"},
+      {"component": "Multiple pages", "issue": "Console warning: 'shadow* style props are deprecated. Use boxShadow.' - Expo React Native Web style deprecation", "priority": "LOW"},
+      {"component": "PushNotifications", "issue": "Console warning: 'Listening to push token changes is not yet fully supported on web.' - expected for web platform", "priority": "INFO"},
+      {"component": "Login button", "issue": "Login button uses Pressable which renders as <button> in web - click handling works with get_by_role but data-testid attribute not rendering (shows testId: null)", "priority": "MEDIUM"}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "FIXED: Changed onPress={sendMessage} to onPress={handleSendMessage} in /app/frontend/app/tender/[id].tsx line 685",
+    "RECOMMENDATION: Investigate and fix 'Unexpected text node' warning - likely whitespace in JSX between View components",
+    "RECOMMENDATION: Ensure data-testid attribute propagates correctly on Pressable/button components"
+  ],
+  "critical_code_review_comments": [
+    "sendMessage function reference was incorrect in tender detail page chat section (line 685) - should be handleSendMessage",
+    "The 'Unexpected text node' React Native Web warning suggests there may be accidental whitespace or empty text nodes within View components - should be investigated"
+  ],
+  "updated_files": ["/app/frontend/app/tender/[id].tsx"],
+  "success_rate": {"backend": "100%", "frontend": "100%"},
+  "test_credentials": "director@grovellows.de / Director123 (Director role), stephan.hintzen@grovellows.de / Stephan123",
+  "seed_data_creation": "",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "All main flows tested and working. Login works with valid credentials. Tender detail page has Claim and Chat UI sections. Profile page has PushNotificationSettings component. Rate limiting (429) may affect rapid testing - wait 1-2 minutes between login attempts if rate limited.",
+  "rca_of_the_issue": "The sendMessage function call in tender detail page was referencing a non-existent function. The actual function is named handleSendMessage. This was a simple typo/naming inconsistency that would cause the chat send button to fail silently."
+}
