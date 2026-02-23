@@ -333,7 +333,17 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Notifications Section */}
+      {/* Push Notifications Section */}
+      <View style={styles.section}>
+        <View style={styles.sectionHeader}>
+          <BellIcon size={24} color={colors.primary} />
+          <Text style={styles.sectionTitle}>Push Notifications</Text>
+        </View>
+        
+        <PushNotificationSettings />
+      </View>
+
+      {/* Notification Preferences Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>{t('profile.notificationPreferences')}</Text>
         
