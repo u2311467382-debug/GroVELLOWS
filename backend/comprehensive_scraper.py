@@ -2002,102 +2002,280 @@ class ComprehensiveScraper:
     # ==================== SWISS PLATFORM ====================
 
     async def scrape_simap_switzerland(self) -> list:
-        """Scrape simap.ch Switzerland using Playwright browser automation for REAL data
+        """Scrape simap.ch Switzerland using API and Playwright for Swiss public tenders
         Only returns tenders from 2026 onwards with proper date filtering"""
         tenders = []
-        seen_tender_ids = set()  # Track seen tender IDs to avoid duplicates
+        seen_tender_ids = set()
+        
+        try:
+            from datetime import datetime, timedelta
+            
+            logger.info("simap.ch: Starting Swiss tender scraping...")
+            
+            # First, try the simap.ch API
+            api_tenders = await self._scrape_simap_api()
+            tenders.extend(api_tenders)
+            
+            # Then try web scraping as fallback
+            if len(tenders) < 20:
+                web_tenders = await self._scrape_simap_web()
+                for t in web_tenders:
+                    if t.get('title') not in [x.get('title') for x in tenders]:
+                        tenders.append(t)
+            
+            logger.info(f"simap.ch: Found {len(tenders)} Swiss tenders total")
+            
+        except Exception as e:
+            logger.error(f"simap.ch scraping error: {e}")
+        
+        return tenders
+    
+    async def _scrape_simap_api(self) -> list:
+        """Try to scrape simap.ch using their API"""
+        tenders = []
+        
+        try:
+            # simap.ch API endpoints for public tenders
+            api_urls = [
+                "https://www.simap.ch/api/v1/notices?status=published&type=tender",
+                "https://www.simap.ch/api/v1/notices?status=open",
+            ]
+            
+            async with aiohttp.ClientSession() as session:
+                for api_url in api_urls:
+                    try:
+                        async with session.get(api_url, timeout=30, headers={
+                            'Accept': 'application/json',
+                            'User-Agent': 'Mozilla/5.0 (compatible; TenderBot/1.0)'
+                        }) as response:
+                            if response.status == 200:
+                                data = await response.json()
+                                
+                                items = data if isinstance(data, list) else data.get('data', data.get('items', data.get('notices', [])))
+                                
+                                for item in items[:50]:
+                                    try:
+                                        title = item.get('title', item.get('name', ''))
+                                        if not title or not self.is_relevant_tender(title):
+                                            continue
+                                        
+                                        # Extract deadline
+                                        deadline_str = item.get('deadline', item.get('submission_deadline', item.get('end_date', '')))
+                                        deadline = self._parse_date(deadline_str) if deadline_str else datetime(2026, 12, 31)
+                                        
+                                        # Filter by year
+                                        if deadline and deadline.year < 2026:
+                                            continue
+                                        
+                                        notice_id = item.get('id', item.get('notice_id', item.get('reference', '')))
+                                        
+                                        cat_info = self.categorize_tender(title)
+                                        
+                                        tenders.append({
+                                            'title': title,
+                                            'description': item.get('description', item.get('summary', title))[:500],
+                                            'tender_id': str(notice_id),
+                                            'budget': item.get('estimated_value', item.get('budget', 'Nicht angegeben')),
+                                            'deadline': deadline,
+                                            'location': item.get('location', item.get('place', 'Schweiz')),
+                                            'project_type': 'Public Tender',
+                                            'contracting_authority': item.get('contracting_authority', item.get('buyer', item.get('organization', 'Schweizer Behörde'))),
+                                            'category': cat_info['category'] or 'Bauwesen',
+                                            'building_typology': cat_info['building_typology'],
+                                            'platform_source': 'simap.ch (Schweiz)',
+                                            'platform_url': 'https://www.simap.ch',
+                                            'direct_link': f"https://www.simap.ch/notice/{notice_id}" if notice_id else 'https://www.simap.ch',
+                                            'country': 'Switzerland',
+                                        })
+                                    except Exception as e:
+                                        logger.debug(f"Error parsing simap API item: {e}")
+                                        continue
+                                        
+                    except Exception as e:
+                        logger.debug(f"simap.ch API error for {api_url}: {e}")
+                        continue
+                        
+        except Exception as e:
+            logger.warning(f"simap.ch API scraping failed: {e}")
+        
+        return tenders
+    
+    async def _scrape_simap_web(self) -> list:
+        """Scrape simap.ch using Playwright browser automation"""
+        tenders = []
         
         try:
             from playwright.async_api import async_playwright
             from datetime import datetime
             
-            logger.info("simap.ch: Starting Playwright browser automation for REAL Swiss tenders...")
-            
-            # Current year for filtering
-            current_year = datetime.now().year
-            min_year = 2026  # Only tenders from 2026 onwards
+            logger.info("simap.ch: Trying web scraping with Playwright...")
             
             async with async_playwright() as p:
                 browser = await p.chromium.launch(headless=True)
                 page = await browser.new_page(viewport={'width': 1920, 'height': 1080})
                 
-                # Search for multiple construction-related terms
-                search_terms = ['Projektsteuerung', 'Bauleitung', 'Baumanagement', 'Hochbau', 'Architektur', 'Planung', 'Sanierung']
+                # Construction-related search terms in German
+                search_terms = ['Bauarbeiten', 'Hochbau', 'Tiefbau', 'Architektur', 'Projektleitung', 'Bauleitung', 'Sanierung', 'Gebäude']
                 
-                for term in search_terms:
+                for term in search_terms[:4]:  # Limit to 4 terms
                     try:
-                        # Navigate to simap.ch main search (NOT archive)
-                        await page.goto('https://www.simap.ch/en/search', wait_until='networkidle', timeout=30000)
-                        await page.wait_for_timeout(2000)
+                        # Navigate to simap.ch
+                        await page.goto('https://www.simap.ch/de', wait_until='domcontentloaded', timeout=30000)
+                        await page.wait_for_timeout(3000)
                         
-                        # Look for search input
-                        search_input = page.locator('input[type="text"], input[type="search"], input[placeholder*="Search"], input[name*="search"]').first
+                        # Take screenshot for debugging
+                        # await page.screenshot(path=f'/tmp/simap_{term}.png')
                         
-                        if await search_input.count() > 0:
-                            await search_input.fill(term)
-                            await page.wait_for_timeout(500)
-                            
-                            # Press Enter or click search button
-                            await search_input.press('Enter')
-                            await page.wait_for_timeout(4000)
-                        else:
-                            # Try alternative: direct URL with search query
-                            await page.goto(f'https://www.simap.ch/en/search?q={term}', wait_until='networkidle', timeout=30000)
+                        # Look for search functionality
+                        search_selectors = [
+                            'input[type="search"]',
+                            'input[type="text"]',
+                            'input[placeholder*="Such"]',
+                            'input[placeholder*="search"]',
+                            '#search',
+                            '.search-input',
+                            'input[name="q"]',
+                            'input[name="search"]'
+                        ]
+                        
+                        search_found = False
+                        for selector in search_selectors:
+                            try:
+                                search_input = page.locator(selector).first
+                                if await search_input.count() > 0 and await search_input.is_visible(timeout=2000):
+                                    await search_input.fill(term)
+                                    await page.wait_for_timeout(500)
+                                    await search_input.press('Enter')
+                                    await page.wait_for_timeout(4000)
+                                    search_found = True
+                                    break
+                            except Exception:
+                                continue
+                        
+                        if not search_found:
+                            # Try direct URL
+                            await page.goto(f'https://www.simap.ch/de/ausschreibungen?q={term}', wait_until='domcontentloaded', timeout=30000)
                             await page.wait_for_timeout(3000)
                         
-                        # Paginate through results (up to PAGES_TO_SCRAPE pages)
-                        for page_num in range(1, self.PAGES_TO_SCRAPE + 1):
-                            if page_num > 1:
-                                # Try to click "Next" or navigate to next page
-                                try:
-                                    next_btn = page.locator('button:has-text("Next"), a:has-text("Next"), button:has-text("Weiter"), a:has-text("Weiter"), .pagination a.next, a[rel="next"]').first
-                                    if await next_btn.count() > 0:
-                                        await next_btn.click()
-                                        await page.wait_for_timeout(3000)
-                                    else:
-                                        break  # No more pages
-                                except Exception:
-                                    break  # No pagination available
-                            
-                            # Get results - look for table rows or list items
-                            rows = await page.locator('table tbody tr, .search-result, .tender-item, article, .list-item').all()
-                            logger.info(f"simap.ch ({term}, page {page_num}): Found {len(rows)} result rows")
-                            
-                            if len(rows) == 0:
-                                break  # No more results
-                            
-                            for row in rows[:20]:  # Limit per page
-                                try:
-                                    text = await row.inner_text()
-                                    text = text.strip()
+                        # Look for tender listings
+                        result_selectors = [
+                            '.notice-list-item',
+                            '.tender-item',
+                            '.search-result',
+                            'article',
+                            '.list-item',
+                            'table tbody tr',
+                            '.card',
+                            '[data-testid*="notice"]',
+                            'a[href*="/notice/"]'
+                        ]
+                        
+                        for selector in result_selectors:
+                            try:
+                                items = await page.locator(selector).all()
+                                if len(items) > 0:
+                                    logger.info(f"simap.ch ({term}): Found {len(items)} items with selector '{selector}'")
                                     
-                                    # Skip header rows or empty rows
-                                    if len(text) < 30 or ('Datum' in text and 'Nr.' in text):
-                                        continue
+                                    for item in items[:15]:
+                                        try:
+                                            text = await item.inner_text()
+                                            text = text.strip()
+                                            
+                                            if len(text) < 20:
+                                                continue
+                                            
+                                            # Extract title (first meaningful line)
+                                            lines = [l.strip() for l in text.split('\n') if l.strip()]
+                                            title = None
+                                            for line in lines:
+                                                if len(line) > 25 and not line[0].isdigit() and 'simap' not in line.lower():
+                                                    title = line[:200]
+                                                    break
+                                            
+                                            if not title or not self.is_relevant_tender(title):
+                                                continue
+                                            
+                                            # Get link
+                                            link = 'https://www.simap.ch'
+                                            try:
+                                                link_elem = item.locator('a').first
+                                                if await link_elem.count() > 0:
+                                                    href = await link_elem.get_attribute('href') or ''
+                                                    if href:
+                                                        link = href if href.startswith('http') else f'https://www.simap.ch{href}'
+                                            except Exception:
+                                                pass
+                                            
+                                            # Extract deadline from text
+                                            deadline = self.extract_deadline(text)
+                                            if not deadline:
+                                                deadline = datetime(2026, 12, 31)
+                                            elif deadline.year < 2026:
+                                                continue
+                                            
+                                            cat_info = self.categorize_tender(title)
+                                            
+                                            # Avoid duplicates
+                                            if not any(t['title'] == title for t in tenders):
+                                                tenders.append({
+                                                    'title': title,
+                                                    'description': text[:500],
+                                                    'budget': self.extract_budget(text),
+                                                    'deadline': deadline,
+                                                    'location': 'Schweiz',
+                                                    'project_type': 'Public Tender',
+                                                    'contracting_authority': 'Schweizer Behörde',
+                                                    'category': cat_info['category'] or 'Bauwesen',
+                                                    'building_typology': cat_info['building_typology'],
+                                                    'platform_source': 'simap.ch (Schweiz)',
+                                                    'platform_url': 'https://www.simap.ch',
+                                                    'direct_link': link,
+                                                    'country': 'Switzerland',
+                                                })
+                                        except Exception as e:
+                                            logger.debug(f"Error parsing simap item: {e}")
+                                            continue
                                     
-                                    # Parse the tender info from row text
-                                    lines = text.split('\n')
-                                    
-                                    # Extract Meldungsnummer (Tender ID) - usually a number
-                                    tender_id = None
-                                    for line in lines:
-                                        line = line.strip()
-                                        # Match patterns like "1234567" or "Meldungsnummer: 1234567"
-                                        id_match = re.search(r'(\d{6,8})', line)
-                                        if id_match and len(line) < 20:
-                                            tender_id = id_match.group(1)
-                                            break
-                                    
-                                    # Skip if we've already seen this tender
-                                    if tender_id and tender_id in seen_tender_ids:
-                                        continue
-                                    if tender_id:
-                                        seen_tender_ids.add(tender_id)
-                                    
-                                    # Get the tender title
-                                    title = None
-                                    for line in lines:
-                                        line = line.strip()
+                                    break  # Found results, stop trying selectors
+                            except Exception:
+                                continue
+                        
+                    except Exception as e:
+                        logger.warning(f"simap.ch search error for '{term}': {e}")
+                        continue
+                
+                await browser.close()
+                
+        except ImportError:
+            logger.warning("Playwright not installed - cannot scrape simap.ch web")
+        except Exception as e:
+            logger.error(f"simap.ch Playwright error: {e}")
+        
+        return tenders
+    
+    def _parse_date(self, date_str: str) -> datetime:
+        """Parse various date formats"""
+        from datetime import datetime
+        
+        if not date_str:
+            return None
+        
+        formats = [
+            '%Y-%m-%d',
+            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%dT%H:%M:%SZ',
+            '%d.%m.%Y',
+            '%d/%m/%Y',
+            '%Y%m%d',
+        ]
+        
+        for fmt in formats:
+            try:
+                return datetime.strptime(date_str[:19], fmt)
+            except Exception:
+                continue
+        
+        return None
                                         if len(line) > 30 and not line[0].isdigit() and 'CPV:' not in line and 'Gesamtansicht' not in line:
                                             title = line
                                             break
