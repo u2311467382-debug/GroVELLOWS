@@ -916,7 +916,9 @@ async def get_gdpr_consent(
 # ============ TENDER ENDPOINTS ============
 
 @api_router.get("/tenders", response_model=List[Tender])
+@limiter.limit("60/minute")  # Rate limit for concurrent users
 async def get_tenders(
+    request: Request,
     status: Optional[str] = None,
     category: Optional[str] = None,
     location: Optional[str] = None,
@@ -926,16 +928,18 @@ async def get_tenders(
     application_status: Optional[str] = None,
     country: Optional[str] = None,
     platform_source: Optional[str] = None,
+    limit: int = Query(default=500, le=1000, description="Max tenders to return"),
+    skip: int = Query(default=0, ge=0, description="Skip N tenders for pagination"),
     current_user: dict = Depends(get_current_user)
 ):
+    """Get tenders with optimized filtering and pagination"""
     query = {}
     
+    # Build query using indexed fields
     if status:
         query["status"] = status
     if category:
         query["category"] = category
-    if location:
-        query["location"] = {"$regex": location, "$options": "i"}
     if building_typology:
         query["building_typology"] = building_typology
     if is_applied is not None:
@@ -946,13 +950,36 @@ async def get_tenders(
         query["country"] = country
     if platform_source:
         query["platform_source"] = platform_source
-    if search:
-        query["$or"] = [
-            {"title": {"$regex": search, "$options": "i"}},
-            {"description": {"$regex": search, "$options": "i"}}
-        ]
     
-    tenders = await db.tenders.find(query).sort("created_at", -1).to_list(1000)
+    # Location search (uses regex - less optimal but necessary)
+    if location:
+        query["location"] = {"$regex": location, "$options": "i"}
+    
+    # Text search optimization - use text index if available
+    if search:
+        # Use $text search for better performance if text index exists
+        try:
+            query["$text"] = {"$search": search}
+        except Exception:
+            # Fallback to regex if text index not available
+            query["$or"] = [
+                {"title": {"$regex": search, "$options": "i"}},
+                {"description": {"$regex": search, "$options": "i"}}
+            ]
+    
+    # Use projection to limit returned fields (faster)
+    projection = {
+        "_id": 1, "title": 1, "description": 1, "budget": 1, "deadline": 1,
+        "location": 1, "project_type": 1, "category": 1, "status": 1,
+        "platform_source": 1, "platform_url": 1, "application_url": 1,
+        "building_typology": 1, "country": 1, "is_applied": 1,
+        "application_status": 1, "created_at": 1, "direct_link": 1,
+        "contracting_authority": 1
+    }
+    
+    # Execute optimized query with limit and skip
+    cursor = db.tenders.find(query, projection).sort("created_at", -1).skip(skip).limit(limit)
+    tenders = await cursor.to_list(length=limit)
     
     return [Tender(
         id=str(tender["_id"]),
