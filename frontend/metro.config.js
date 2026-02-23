@@ -14,12 +14,17 @@ config.cacheStores = [
 // Add font file extensions for proper bundling
 config.resolver.assetExts = [...(config.resolver.assetExts || []), 'ttf', 'otf', 'woff', 'woff2'];
 
-// // Exclude unnecessary directories from file watching
-// config.watchFolders = [__dirname];
-// config.resolver.blacklistRE = /(.*)\/(__tests__|android|ios|build|dist|.git|node_modules\/.*\/android|node_modules\/.*\/ios|node_modules\/.*\/windows|node_modules\/.*\/macos)(\/.*)?$/;
+// Disable watchman to avoid file watcher limits in containerized environments
+config.resolver.useWatchman = false;
 
-// // Alternative: use a more aggressive exclusion pattern
-// config.resolver.blacklistRE = /node_modules\/.*\/(android|ios|windows|macos|__tests__|\.git|.*\.android\.js|.*\.ios\.js)$/;
+// Disable file watching in CI/containerized environments
+if (process.env.CI === 'true' || process.env.CI === '1') {
+  config.watcher = {
+    healthCheck: {
+      enabled: false,
+    },
+  };
+}
 
 // Reduce the number of workers to decrease resource usage
 config.maxWorkers = 2;
