@@ -47,10 +47,50 @@ from security import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-# MongoDB connection
+# MongoDB connection with connection pooling for concurrent users
 mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
+client = AsyncIOMotorClient(
+    mongo_url,
+    maxPoolSize=50,  # Max connections in pool
+    minPoolSize=10,  # Min connections to maintain
+    maxIdleTimeMS=30000,  # Close idle connections after 30s
+    waitQueueTimeoutMS=10000,  # Timeout waiting for connection
+    serverSelectionTimeoutMS=5000,  # Server selection timeout
+    connectTimeoutMS=10000,  # Connection timeout
+    socketTimeoutMS=30000,  # Socket timeout
+)
 db = client[os.environ['DB_NAME']]
+
+# Simple in-memory cache for frequently accessed data
+from functools import lru_cache
+from time import time
+
+class SimpleCache:
+    """Thread-safe simple cache for API responses"""
+    def __init__(self, ttl_seconds: int = 60):
+        self.cache = {}
+        self.ttl = ttl_seconds
+    
+    def get(self, key: str):
+        if key in self.cache:
+            value, timestamp = self.cache[key]
+            if time() - timestamp < self.ttl:
+                return value
+            del self.cache[key]
+        return None
+    
+    def set(self, key: str, value):
+        self.cache[key] = (value, time())
+    
+    def invalidate(self, key: str = None):
+        if key:
+            self.cache.pop(key, None)
+        else:
+            self.cache.clear()
+
+# Cache instances
+users_cache = SimpleCache(ttl_seconds=300)  # 5 min cache for users list
+stats_cache = SimpleCache(ttl_seconds=60)   # 1 min cache for stats
 
 # JWT Settings
 SECRET_KEY = os.environ.get('SECRET_KEY', 'grovellows-secure-key-2025-production')
