@@ -3657,6 +3657,41 @@ async def cleanup_awarded_tenders():
     except Exception as e:
         logger.error(f"❌ Cleanup error: {e}")
 
+async def cleanup_old_news():
+    """
+    Background task that runs weekly to clean up old news articles.
+    
+    Retention rule: Delete news articles older than 3 weeks.
+    """
+    try:
+        logger.info("🧹 News cleanup task started...")
+        
+        # Calculate cutoff date (3 weeks ago)
+        three_weeks_ago = datetime.utcnow() - timedelta(weeks=3)
+        
+        # Delete old news articles from news_articles collection
+        result = await db.news_articles.delete_many({
+            "scraped_at": {"$lt": three_weeks_ago}
+        })
+        news_articles_deleted = result.deleted_count
+        
+        # Also clean up the seeded news collection if it exists
+        result2 = await db.news.delete_many({
+            "published_date": {"$lt": three_weeks_ago}
+        })
+        news_deleted = result2.deleted_count
+        
+        total_deleted = news_articles_deleted + news_deleted
+        
+        if total_deleted > 0:
+            logger.info(f"✅ News cleanup complete: Deleted {total_deleted} old articles (news_articles: {news_articles_deleted}, news: {news_deleted})")
+        else:
+            logger.info("✅ News cleanup complete: No old articles to delete")
+            
+    except Exception as e:
+        logger.error(f"❌ News cleanup error: {e}")
+
+
 # ============ APP LIFECYCLE EVENTS ============
 
 @app.on_event("startup")
