@@ -1402,6 +1402,289 @@ async def get_shares(
     
     return shares
 
+# ============ PUSH NOTIFICATIONS ENDPOINTS ============
+
+class PushTokenRequest(BaseModel):
+    """Request model for registering a push token"""
+    expo_push_token: str = Field(..., min_length=1)
+    platform: str = Field(..., pattern="^(ios|android|web)$")
+
+class PushTokenResponse(BaseModel):
+    """Response model for push token registration"""
+    id: str
+    user_id: str
+    expo_push_token: str
+    platform: str
+    is_active: bool
+    created_at: datetime
+
+class NotificationSendRequest(BaseModel):
+    """Request model for sending notifications"""
+    user_ids: List[str] = Field(..., min_items=1)
+    title: str = Field(..., min_length=1, max_length=100)
+    body: str = Field(..., min_length=1, max_length=500)
+    data: Optional[Dict[str, Any]] = None
+
+@api_router.post("/push-tokens", status_code=status.HTTP_201_CREATED)
+async def register_push_token(
+    request_body: PushTokenRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Register or update a push token for the current user"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        # Check if token already exists for this user
+        existing = await db.push_tokens.find_one({
+            "user_id": user_id,
+            "expo_push_token": request_body.expo_push_token
+        })
+        
+        if existing:
+            # Update existing token
+            await db.push_tokens.update_one(
+                {"_id": existing["_id"]},
+                {"$set": {
+                    "is_active": True,
+                    "platform": request_body.platform,
+                    "updated_at": datetime.utcnow()
+                }}
+            )
+            return {
+                "id": str(existing["_id"]),
+                "user_id": user_id,
+                "expo_push_token": request_body.expo_push_token,
+                "platform": request_body.platform,
+                "is_active": True,
+                "created_at": existing.get("created_at", datetime.utcnow())
+            }
+        
+        # Create new token
+        token_doc = {
+            "user_id": user_id,
+            "expo_push_token": request_body.expo_push_token,
+            "platform": request_body.platform,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+        
+        result = await db.push_tokens.insert_one(token_doc)
+        
+        logger.info(f"Push token registered for user {user_id}")
+        
+        return {
+            "id": str(result.inserted_id),
+            "user_id": user_id,
+            "expo_push_token": request_body.expo_push_token,
+            "platform": request_body.platform,
+            "is_active": True,
+            "created_at": token_doc["created_at"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error registering push token: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to register push token"
+        )
+
+@api_router.delete("/push-tokens/{user_id}")
+async def unregister_push_tokens(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Unregister all push tokens for a user (typically on logout)"""
+    try:
+        current_user_id = str(current_user["_id"])
+        
+        # Users can only delete their own tokens (or admins can delete any)
+        if current_user_id != user_id and current_user.get("role") != "Admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Cannot delete tokens for other users"
+            )
+        
+        result = await db.push_tokens.update_many(
+            {"user_id": user_id},
+            {"$set": {"is_active": False}}
+        )
+        
+        logger.info(f"Deactivated {result.modified_count} push tokens for user {user_id}")
+        
+        return {"message": f"Deactivated {result.modified_count} tokens"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error unregistering push tokens: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to unregister push tokens"
+        )
+
+@api_router.get("/push-tokens/status")
+async def get_push_token_status(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get push notification status for current user"""
+    try:
+        user_id = str(current_user["_id"])
+        
+        tokens = await db.push_tokens.find({
+            "user_id": user_id,
+            "is_active": True
+        }).to_list(10)
+        
+        return {
+            "has_active_tokens": len(tokens) > 0,
+            "token_count": len(tokens),
+            "platforms": list(set([t.get("platform") for t in tokens]))
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting push token status: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get push token status"
+        )
+
+async def send_push_notifications(
+    user_ids: List[str],
+    title: str,
+    body: str,
+    data: Optional[Dict[str, Any]] = None
+) -> Dict[str, Any]:
+    """
+    Send push notifications to specified users via Expo Push Service
+    """
+    try:
+        from exponent_server_sdk import PushClient, PushMessage, DeviceNotRegisteredError
+        
+        # Get active push tokens for the specified users
+        tokens = await db.push_tokens.find({
+            "user_id": {"$in": user_ids},
+            "is_active": True
+        }).to_list(1000)
+        
+        if not tokens:
+            logger.info(f"No active push tokens found for users: {user_ids}")
+            return {"success": False, "message": "No active tokens", "sent_count": 0}
+        
+        # Build push messages
+        messages = []
+        for token in tokens:
+            try:
+                message = PushMessage(
+                    to=token["expo_push_token"],
+                    title=title,
+                    body=body,
+                    data=data or {},
+                    sound="default",
+                    badge=1
+                )
+                messages.append((token, message))
+            except Exception as e:
+                logger.warning(f"Error creating push message: {e}")
+        
+        if not messages:
+            return {"success": False, "message": "No valid messages", "sent_count": 0}
+        
+        # Send notifications
+        client = PushClient()
+        sent_count = 0
+        failed_tokens = []
+        
+        for token, message in messages:
+            try:
+                response = client.publish(message)
+                
+                # Check for device not registered error
+                if response.status == "error":
+                    if "DeviceNotRegistered" in str(response.details):
+                        # Mark token as inactive
+                        await db.push_tokens.update_one(
+                            {"_id": token["_id"]},
+                            {"$set": {"is_active": False}}
+                        )
+                        failed_tokens.append(token["expo_push_token"])
+                else:
+                    sent_count += 1
+                    
+            except DeviceNotRegisteredError:
+                # Mark token as inactive
+                await db.push_tokens.update_one(
+                    {"_id": token["_id"]},
+                    {"$set": {"is_active": False}}
+                )
+                failed_tokens.append(token["expo_push_token"])
+            except Exception as e:
+                logger.warning(f"Error sending push notification: {e}")
+        
+        # Log notification
+        await db.notification_logs.insert_one({
+            "user_ids": user_ids,
+            "title": title,
+            "body": body,
+            "data": data,
+            "sent_count": sent_count,
+            "failed_count": len(failed_tokens),
+            "created_at": datetime.utcnow()
+        })
+        
+        logger.info(f"Push notifications sent: {sent_count} success, {len(failed_tokens)} failed")
+        
+        return {
+            "success": True,
+            "message": f"Sent {sent_count} notifications",
+            "sent_count": sent_count,
+            "failed_count": len(failed_tokens)
+        }
+        
+    except ImportError:
+        logger.warning("exponent-server-sdk not installed - push notifications disabled")
+        return {"success": False, "message": "Push service not available", "sent_count": 0}
+    except Exception as e:
+        logger.error(f"Error sending push notifications: {e}")
+        return {"success": False, "message": str(e), "sent_count": 0}
+
+@api_router.post("/notifications/send")
+async def send_notification_endpoint(
+    request_body: NotificationSendRequest,
+    admin_user: dict = Depends(require_admin)
+):
+    """Send push notifications to specified users (admin only)"""
+    result = await send_push_notifications(
+        user_ids=request_body.user_ids,
+        title=request_body.title,
+        body=request_body.body,
+        data=request_body.data
+    )
+    
+    if not result.get("success"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=result.get("message")
+        )
+    
+    return result
+
+@api_router.post("/notifications/test")
+async def test_push_notification(
+    current_user: dict = Depends(get_current_user)
+):
+    """Send a test push notification to the current user"""
+    user_id = str(current_user["_id"])
+    
+    result = await send_push_notifications(
+        user_ids=[user_id],
+        title="Test Notification",
+        body="This is a test notification from GroVELLOWS!",
+        data={"type": "test", "screen": "Tenders"}
+    )
+    
+    return result
+
 # ============ USERS ENDPOINTS ============
 
 @api_router.get("/users", response_model=List[User])
