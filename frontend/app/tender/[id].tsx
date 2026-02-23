@@ -560,7 +560,40 @@ export default function TenderDetailScreen() {
                   color={colors.textWhite} 
                 />
                 <Text style={styles.actionButtonText}>
-                  {tender.is_applied ? 'Applied' : 'Apply to Tender'}
+                  {tender.is_applied ? 'Applied' : 'Mark as Applied'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+
+          {/* Claim Button */}
+          <TouchableOpacity 
+            style={[
+              styles.claimButton,
+              tender.claimed_by === user?.id && styles.claimButtonActive,
+              tender.claimed_by && tender.claimed_by !== user?.id && styles.claimButtonDisabled,
+            ]}
+            onPress={handleClaim}
+            disabled={isClaiming}
+          >
+            {isClaiming ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <>
+                <Ionicons 
+                  name={tender.claimed_by ? "person-circle" : "hand-left"} 
+                  size={20} 
+                  color={tender.claimed_by === user?.id ? colors.textWhite : colors.primary} 
+                />
+                <Text style={[
+                  styles.claimButtonText,
+                  tender.claimed_by === user?.id && styles.claimButtonTextActive,
+                ]}>
+                  {tender.claimed_by === user?.id 
+                    ? 'Working on it' 
+                    : tender.claimed_by 
+                      ? `Claimed by ${tender.claimed_by_name}`
+                      : 'Claim Tender'}
                 </Text>
               </>
             )}
@@ -575,6 +608,91 @@ export default function TenderDetailScreen() {
               <Ionicons name="share-social" size={20} color={colors.primary} />
               <Text style={styles.shareButtonText}>Share with Team</Text>
             </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Team Chat Section */}
+        <View style={styles.section}>
+          <TouchableOpacity 
+            style={styles.chatHeader}
+            onPress={() => setShowChat(!showChat)}
+          >
+            <View style={styles.chatHeaderLeft}>
+              <Ionicons name="chatbubbles" size={22} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Team Discussion</Text>
+              {chatMessages.length > 0 && (
+                <View style={styles.chatBadge}>
+                  <Text style={styles.chatBadgeText}>{chatMessages.length}</Text>
+                </View>
+              )}
+            </View>
+            <Ionicons 
+              name={showChat ? "chevron-up" : "chevron-down"} 
+              size={22} 
+              color={colors.textLight} 
+            />
+          </TouchableOpacity>
+
+          {showChat && (
+            <View style={styles.chatContainer}>
+              {chatMessages.length === 0 ? (
+                <View style={styles.emptyChatContainer}>
+                  <Ionicons name="chatbubble-ellipses-outline" size={48} color={colors.textLight} />
+                  <Text style={styles.emptyChatText}>No messages yet</Text>
+                  <Text style={styles.emptyChatSubtext}>Start the discussion with your team</Text>
+                </View>
+              ) : (
+                <ScrollView 
+                  ref={chatScrollRef}
+                  style={styles.chatMessages}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {chatMessages.map((msg) => (
+                    <View 
+                      key={msg.id} 
+                      style={[
+                        styles.chatMessage,
+                        msg.user_id === user?.id && styles.chatMessageOwn,
+                      ]}
+                    >
+                      <View style={styles.chatMessageHeader}>
+                        <Text style={styles.chatMessageUser}>{msg.user_name}</Text>
+                        <Text style={styles.chatMessageTime}>
+                          {format(new Date(msg.created_at), 'dd.MM HH:mm')}
+                        </Text>
+                      </View>
+                      <Text style={styles.chatMessageText}>{msg.message}</Text>
+                    </View>
+                  ))}
+                </ScrollView>
+              )}
+
+              <View style={styles.chatInputContainer}>
+                <TextInput
+                  style={styles.chatInput}
+                  placeholder="Write a message..."
+                  placeholderTextColor={colors.textLight}
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity 
+                  style={[
+                    styles.chatSendButton,
+                    !newMessage.trim() && styles.chatSendButtonDisabled,
+                  ]}
+                  onPress={sendMessage}
+                  disabled={!newMessage.trim() || sendingMessage}
+                >
+                  {sendingMessage ? (
+                    <ActivityIndicator size="small" color={colors.textWhite} />
+                  ) : (
+                    <Ionicons name="send" size={20} color={colors.textWhite} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
           )}
         </View>
 
