@@ -9,9 +9,9 @@ import {
   Alert,
 } from 'react-native';
 import { BellIcon, BellAlertIcon, BellSlashIcon, CheckCircleIcon, ExclamationCircleIcon } from 'react-native-heroicons/outline';
-import { colors } from '../../utils/colors';
-import { useNotifications } from '../../contexts/NotificationContext';
-import api from '../../utils/api';
+import { colors } from '../utils/colors';
+import { useNotifications } from '../contexts/NotificationContext';
+import api from '../utils/api';
 
 export default function PushNotificationSettings() {
   const { 
