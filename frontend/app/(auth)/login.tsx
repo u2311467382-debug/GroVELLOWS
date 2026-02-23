@@ -148,18 +148,23 @@ export default function Login() {
             />
           </View>
 
-          <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+          <Pressable
+            style={({ pressed }) => [
+              styles.button,
+              loading && styles.buttonDisabled,
+              pressed && { opacity: 0.8 }
+            ]}
             onPress={handleLogin}
             disabled={loading}
             data-testid="login-button"
+            accessibilityRole="button"
           >
             {loading ? (
               <ActivityIndicator color={colors.card} />
             ) : (
               <Text style={styles.buttonText}>{t('auth.login')}</Text>
             )}
-          </TouchableOpacity>
+          </Pressable>
 
           <TouchableOpacity
             style={styles.linkButton}
