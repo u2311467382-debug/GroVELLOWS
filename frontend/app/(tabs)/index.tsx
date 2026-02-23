@@ -218,8 +218,7 @@ export default function TendersScreen() {
 
   const handleCountryChange = (country: string) => {
     setSelectedCountry(country);
-    setLoading(true);
-    fetchTenders(country);
+    // fetchTenders is called automatically via useEffect when selectedCountry changes
   };
 
   const onRefresh = useCallback(() => {
