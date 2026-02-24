@@ -263,49 +263,55 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: colors.primary,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
   },
-  headerRow: {
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#A07D50',  // Exact ochre/gold color matching Tenders page
   },
-  filterContainer: {
-    flexDirection: 'row',
-    gap: 6,
+  resultsCount: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.7)',
+    fontWeight: '500',
   },
-  filterButton: {
+  filtersScroll: {
+    flexDirection: 'row',
+  },
+  filtersContainer: {
+    flexDirection: 'row',
+    paddingBottom: 4,
+  },
+  filterChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    marginRight: 8,
+    gap: 6,
   },
-  filterButtonActive: {
+  filterChipActive: {
     backgroundColor: colors.secondary,
   },
   filterFlag: {
-    fontSize: 12,
+    fontSize: 14,
   },
-  filterText: {
-    fontSize: 11,
-    color: colors.textLight,
+  filterChipText: {
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
-  filterTextActive: {
+  filterChipTextActive: {
     color: colors.textWhite,
-  },
-  resultsCount: {
-    fontSize: 11,
-    color: colors.textLight,
   },
   centered: {
     flex: 1,
