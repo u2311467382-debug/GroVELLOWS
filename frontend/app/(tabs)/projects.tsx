@@ -184,40 +184,43 @@ export default function ProjectsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Region Filters */}
+      {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerRow}>
+        <View style={styles.headerTop}>
           <Text style={styles.headerTitle}>Developer Projects</Text>
-          
-          {/* Region Filter Buttons - inline with title */}
-          <View style={styles.filterContainer}>
-            {REGIONS.map((region) => (
-              <TouchableOpacity
-                key={region.id}
-                style={[
-                  styles.filterButton,
-                  selectedRegion === region.id && styles.filterButtonActive,
-                ]}
-                onPress={() => handleRegionChange(region.id)}
-              >
-                <Text style={styles.filterFlag}>{region.flag}</Text>
-                <Text
-                  style={[
-                    styles.filterText,
-                    selectedRegion === region.id && styles.filterTextActive,
-                  ]}
-                >
-                  {region.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+          <Text style={styles.resultsCount}>
+            {projects.length} {projects.length === 1 ? 'project' : 'projects'}
+          </Text>
         </View>
         
-        {/* Results count */}
-        <Text style={styles.resultsCount}>
-          {projects.length} {projects.length === 1 ? 'project' : 'projects'} found
-        </Text>
+        {/* Region Filters - horizontal scrollable like tender page */}
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={styles.filtersScroll}
+          contentContainerStyle={styles.filtersContainer}
+        >
+          {REGIONS.map((region) => (
+            <TouchableOpacity
+              key={region.id}
+              style={[
+                styles.filterChip,
+                selectedRegion === region.id && styles.filterChipActive,
+              ]}
+              onPress={() => handleRegionChange(region.id)}
+            >
+              <Text style={styles.filterFlag}>{region.flag}</Text>
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedRegion === region.id && styles.filterChipTextActive,
+                ]}
+              >
+                {region.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
       </View>
 
       {loading ? (
