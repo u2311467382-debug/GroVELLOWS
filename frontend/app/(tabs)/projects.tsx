@@ -95,6 +95,17 @@ export default function ProjectsScreen() {
     setLoading(true);
   };
 
+  const shareProject = async (project: DeveloperProject) => {
+    try {
+      await Share.share({
+        message: `${project.project_name}\n\nDeveloper: ${project.developer_name}\nLocation: ${project.location}\nStatus: ${project.status}\n\n${project.description || ''}`,
+        title: project.project_name,
+      });
+    } catch (error) {
+      console.error('Error sharing project:', error);
+    }
+  };
+
   const renderProjectCard = ({ item }: { item: DeveloperProject }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
