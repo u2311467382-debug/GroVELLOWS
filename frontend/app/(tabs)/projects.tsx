@@ -189,7 +189,15 @@ export default function ProjectsScreen() {
             {item.expected_completion ? format(new Date(item.expected_completion), 'MMM yyyy') : 'TBD'}
           </Text>
         </View>
-        <ChevronRightIcon size={20} color={colors.primary} />
+        <View style={styles.footerActions}>
+          <TouchableOpacity 
+            style={styles.shareButton}
+            onPress={() => shareProject(item)}
+          >
+            <ShareIcon size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <ChevronRightIcon size={20} color={colors.primary} />
+        </View>
       </View>
     </View>
   );
