@@ -441,10 +441,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
+    maxWidth: '50%',
   },
   sourceText: {
-    fontSize: 12,
+    fontSize: 11,
     color: colors.textLight,
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shareButton: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: colors.background,
   },
   readMoreButton: {
     flexDirection: 'row',
@@ -452,7 +464,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   readMoreText: {
-    fontSize: 14,
+    fontSize: 13,
     color: colors.secondary,
     fontWeight: '600',
   },
