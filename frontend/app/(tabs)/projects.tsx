@@ -10,9 +10,10 @@ import {
   SafeAreaView,
   Platform,
   ScrollView,
+  Share,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { BuildingOfficeIcon, MapPinIcon, CurrencyEuroIcon, CalendarIcon, ChevronRightIcon } from 'react-native-heroicons/outline';
+import { BuildingOfficeIcon, MapPinIcon, CurrencyEuroIcon, CalendarIcon, ChevronRightIcon, ShareIcon } from 'react-native-heroicons/outline';
 import { colors } from '../../utils/colors';
 import api from '../../utils/api';
 import { format } from 'date-fns';
