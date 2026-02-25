@@ -125,10 +125,23 @@ export default function NewsScreen() {
     Linking.openURL(url);
   };
 
+  const shareNews = async (item: NewsArticle) => {
+    try {
+      await Share.share({
+        message: `${item.title}\n\n${item.summary || item.description || ''}\n\nSource: ${item.source}\n${item.url}`,
+        title: item.title,
+        url: item.url,
+      });
+    } catch (error) {
+      console.error('Error sharing news:', error);
+    }
+  };
+
   const renderNewsCard = ({ item }: { item: NewsArticle }) => (
     <View style={styles.card}>
-      <View style={styles.cardHeader}>
-        <View style={styles.badges}>
+      {/* Top row: Category badge and date */}
+      <View style={styles.cardTopRow}>
+        <View style={styles.badgesRow}>
           <View
             style={[
               styles.severityBadge,
@@ -142,17 +155,17 @@ export default function NewsScreen() {
           <View style={styles.typeBadge}>
             <Ionicons
               name={ISSUE_ICONS[(item.issue_type || item.category || 'General') as keyof typeof ISSUE_ICONS] || 'newspaper'}
-              size={14}
+              size={12}
               color={colors.primary}
             />
-            <Text style={styles.typeText}>
+            <Text style={styles.typeText} numberOfLines={1}>
               {item.category || item.issue_type || 'News'}
             </Text>
           </View>
         </View>
         <Text style={styles.dateText}>
-          {item.published_at ? format(new Date(item.published_at), 'dd MMM yyyy') : 
-           item.published_date ? format(new Date(item.published_date), 'dd MMM yyyy') : 'Recent'}
+          {item.published_at ? format(new Date(item.published_at), 'dd MMM') : 
+           item.published_date ? format(new Date(item.published_date), 'dd MMM') : 'Recent'}
         </Text>
       </View>
 
@@ -175,21 +188,29 @@ export default function NewsScreen() {
       )}
 
       <Text style={styles.cardDescription} numberOfLines={3}>
-        {item.description}
+        {item.description || item.summary}
       </Text>
 
       <View style={styles.cardFooter}>
         <View style={styles.sourceContainer}>
           <Ionicons name="newspaper-outline" size={14} color={colors.textLight} />
-          <Text style={styles.sourceText}>{item.source}</Text>
+          <Text style={styles.sourceText} numberOfLines={1}>{item.source}</Text>
         </View>
-        <TouchableOpacity
-          style={styles.readMoreButton}
-          onPress={() => openArticle(item.url)}
-        >
-          <Text style={styles.readMoreText}>{t('news.readMore')}</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.secondary} />
-        </TouchableOpacity>
+        <View style={styles.footerActions}>
+          <TouchableOpacity
+            style={styles.shareButton}
+            onPress={() => shareNews(item)}
+          >
+            <Ionicons name="share-outline" size={18} color={colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.readMoreButton}
+            onPress={() => openArticle(item.url)}
+          >
+            <Text style={styles.readMoreText}>{t('news.readMore')}</Text>
+            <Ionicons name="arrow-forward" size={14} color={colors.secondary} />
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
