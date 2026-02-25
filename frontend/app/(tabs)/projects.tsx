@@ -486,6 +486,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
   },
   dateLabel: {
     fontSize: 12,
@@ -495,6 +496,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.primary,
     fontWeight: '600',
+  },
+  footerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  shareButton: {
+    padding: 6,
+    borderRadius: 20,
+    backgroundColor: colors.background,
   },
   emptyContainer: {
     alignItems: 'center',
