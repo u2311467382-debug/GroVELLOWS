@@ -169,17 +169,54 @@ export default function TendersScreen() {
 
   // Check if typology matches tender (including Hochbau/Tiefbau search)
   const matchesTypology = (tender: Tender, typology: string): boolean => {
+    const titleLower = tender.title?.toLowerCase() || '';
+    const descLower = tender.description?.toLowerCase() || '';
+    const dbTypology = tender.building_typology?.toLowerCase() || '';
+    
+    // Hochbau = Commercial, Residential, Mixed-Use buildings
     if (typology === 'Hochbau') {
-      return tender.title?.toLowerCase().includes('hochbau') || 
-             tender.description?.toLowerCase().includes('hochbau') ||
+      return titleLower.includes('hochbau') || 
+             descLower.includes('hochbau') ||
+             dbTypology === 'commercial' ||
+             dbTypology === 'residential' ||
+             dbTypology === 'mixed-use' ||
+             dbTypology === 'hospitality' ||
+             dbTypology === 'education' ||
              tender.building_typology === 'Hochbau';
     }
+    
+    // Tiefbau = Infrastructure, underground construction
     if (typology === 'Tiefbau') {
-      return tender.title?.toLowerCase().includes('tiefbau') || 
-             tender.description?.toLowerCase().includes('tiefbau') ||
+      return titleLower.includes('tiefbau') || 
+             descLower.includes('tiefbau') ||
+             titleLower.includes('infrastruktur') ||
+             titleLower.includes('straßenbau') ||
+             titleLower.includes('kanal') ||
+             titleLower.includes('brücke') ||
+             dbTypology === 'infrastructure' ||
              tender.building_typology === 'Tiefbau';
     }
-    return tender.building_typology === typology;
+    
+    // Healthcare filter
+    if (typology === 'Healthcare') {
+      return titleLower.includes('krankenhaus') || 
+             titleLower.includes('klinik') ||
+             titleLower.includes('hospital') ||
+             titleLower.includes('gesundheit') ||
+             dbTypology === 'healthcare';
+    }
+    
+    // Infrastructure filter
+    if (typology === 'Infrastructure') {
+      return titleLower.includes('infrastruktur') || 
+             titleLower.includes('infrastructure') ||
+             titleLower.includes('straße') ||
+             titleLower.includes('brücke') ||
+             dbTypology === 'infrastructure';
+    }
+    
+    // Direct match for other typologies
+    return tender.building_typology?.toLowerCase() === typology.toLowerCase();
   };
 
   useEffect(() => {
