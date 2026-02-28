@@ -3,7 +3,8 @@ module.exports = function(api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      'react-native-reanimated/plugin',
+      // Only include reanimated plugin for native builds, not web
+      ...(process.env.EXPO_WEB !== 'true' ? ['react-native-reanimated/plugin'] : []),
     ],
   };
 };
