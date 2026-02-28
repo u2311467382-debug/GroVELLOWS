@@ -17,6 +17,9 @@ config.resolver.assetExts = [...(config.resolver.assetExts || []), 'ttf', 'otf',
 // Disable watchman to avoid file watcher limits in containerized environments
 config.resolver.useWatchman = false;
 
+// Ensure node_modules resolution works correctly for babel plugins
+config.resolver.nodeModulesPaths = [path.resolve(__dirname, 'node_modules')];
+
 // Disable file watching in CI/containerized environments
 if (process.env.CI === 'true' || process.env.CI === '1') {
   config.watcher = {
